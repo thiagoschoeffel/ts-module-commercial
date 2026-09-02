@@ -20,7 +20,7 @@ export const mockCustomers: CustomerDetail[] = [
     id: 'cli-1003', name: 'Ana Lima', phone: '(11) 97654-3210', active: true,
     notes: 'Ligação somente após as 10h.',
     addresses: [{ id: 'end-1003', label: 'Trabalho', street: 'Rua Vergueiro', number: '1880', neighborhood: 'Vila Mariana', city: 'São Paulo', state: 'SP' }],
-    preferences: [{ id: 'pref-1003-1', description: 'Reduzir carboidrato' }], dietaryRestrictions: ['Glúten', 'Castanhas'], preferredPaymentMethod: 'Cartão'
+    preferences: [{ id: 'pref-1003-1', description: 'Reduzir carboidrato' }], dietaryRestrictions: ['Glúten', 'Castanhas'], preferredPaymentMethod: 'Cartão de crédito'
   },
   {
     id: 'cli-1004', name: 'Carlos Mendes', phone: '(11) 96543-2109', active: false,

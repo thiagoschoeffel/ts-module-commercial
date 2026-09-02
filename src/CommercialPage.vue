@@ -44,10 +44,18 @@ function createCustomer() {
   const current = `${window.location.pathname}${window.location.search}`
   window.location.assign(`/clientes/novo?retorno=${encodeURIComponent(current)}`)
 }
+
+function returnToCustomers() {
+  window.location.assign(listReturnUrl())
+}
 </script>
 
 <template>
-  <div class="isolate">
+  <div
+    class="isolate"
+    :class="props.customerPage === 'list'
+      ? 'md:flex md:h-[calc(100dvh-11rem)] md:min-h-0 md:flex-col'
+      : ''">
     <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
       <PageHeader :title="pageTitle" :subtitle="pageSubtitle">
         <template #icon>
@@ -55,13 +63,14 @@ function createCustomer() {
         </template>
       </PageHeader>
 
-      <a
-        v-if="props.customerPage === 'detail'"
-        :href="listReturnUrl()"
-        class="hidden items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex">
+      <button
+        v-if="props.customerPage !== 'list'"
+        type="button"
+        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        @click="returnToCustomers">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
         Voltar para clientes
-      </a>
+      </button>
 
       <Button v-if="props.customerPage === 'list'" type="button" @click="createCustomer">
         <template #icon><PlusIcon /></template>
@@ -69,7 +78,9 @@ function createCustomer() {
       </Button>
     </div>
 
-    <main class="mt-4">
+    <main
+      class="mt-6"
+      :class="props.customerPage === 'list' ? 'md:min-h-0 md:flex-1' : ''">
       <CustomerListPage v-if="props.customerPage === 'list'" />
       <CustomerFormPage
         v-else-if="props.customerPage === 'new' || props.customerPage === 'edit'"
