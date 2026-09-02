@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  Alert, AlertDialog, Badge, Button, Checkbox, CheckIcon, Input, MultiSelect, PlusIcon,
-  SectionCard, Textarea, TriangleAlertIcon, XIcon, type MultiSelectOption
+  Alert, AlertDialog, Badge, Button, Card, Checkbox, CheckIcon, Input, MultiSelect, PlusIcon,
+  Textarea, TriangleAlertIcon, XIcon, type MultiSelectOption
 } from '@thiagoschoeffel/ts-components'
 import { getCustomer, nextCustomerId, saveCustomer } from '../mocks/customerStore'
 import type { CustomerAddress, CustomerDetail, CustomerPreference } from '../types/customer'
@@ -118,15 +118,15 @@ watch(snapshot, () => { if (savedMessage.value) savedMessage.value = '' })
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
       <div class="space-y-4">
-        <SectionCard title="Dados cadastrais" description="Informações básicas usadas no atendimento.">
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Dados cadastrais</h2><p class="mt-1 text-sm text-slate-500">Informações básicas usadas no atendimento.</p></template>
           <div class="grid gap-4 sm:grid-cols-2">
             <Input id="customer-name" v-model="name" label="Nome" placeholder="Nome do cliente" required :error="nameError" />
             <Input id="customer-phone" v-model="phone" type="tel" label="Telefone" placeholder="(11) 99999-9999" required :error="phoneError" />
           </div>
           <Checkbox v-model="active" class="mt-4" label="Cliente ativo" />
-        </SectionCard>
+        </Card>
 
-        <SectionCard title="Endereços" description="O cadastro atual será usado somente como origem para novos pedidos.">
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Endereços</h2><p class="mt-1 text-sm text-slate-500">O cadastro atual será usado somente como origem para novos pedidos.</p></template>
           <Alert variants="neutral" size="small" description="Alterar estes endereços não modifica os snapshots preservados em pedidos antigos." />
           <div v-if="addresses.length" class="mt-4 space-y-2">
             <div v-for="(address, index) in addresses" :key="address.id" class="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 p-3">
@@ -139,27 +139,27 @@ watch(snapshot, () => { if (savedMessage.value) savedMessage.value = '' })
             <div class="mt-4 flex justify-end gap-2"><Button size="small" variant="secondary" @click="cancelAddress">Cancelar</Button><Button size="small" @click="commitAddress">{{ editingAddressIndex == null ? 'Adicionar' : 'Salvar endereço' }}</Button></div>
           </div>
           <Button v-else class="mt-4" size="small" variant="secondary" @click="startNewAddress"><template #icon><PlusIcon /></template>Adicionar endereço</Button>
-        </SectionCard>
+        </Card>
 
-        <SectionCard title="Preferências" description="Comportamentos recorrentes desejados, que podem ser ajustados em cada pedido.">
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Preferências</h2><p class="mt-1 text-sm text-slate-500">Comportamentos recorrentes desejados, que podem ser ajustados em cada pedido.</p></template>
           <div class="flex gap-2"><Input v-model="preferenceDraft" aria-label="Nova preferência" placeholder="Ex.: Sem arroz" @keydown.enter.prevent="addPreference" /><Button :disabled="!preferenceDraft.trim()" @click="addPreference"><template #icon><PlusIcon /></template>Adicionar</Button></div>
           <div v-if="preferences.length" class="mt-3 flex flex-wrap gap-2"><span v-for="(preference, index) in preferences" :key="preference.id" class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{{ preference.description }}<button type="button" class="rounded text-slate-400 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" :aria-label="`Remover preferência ${preference.description}`" @click="removePreference(index)"><XIcon class="size-3.5" /></button></span></div>
           <p v-else class="mt-3 text-sm text-slate-400">Nenhuma preferência cadastrada.</p>
-        </SectionCard>
+        </Card>
 
-        <SectionCard title="Restrições alimentares" description="Informações de maior severidade, sempre verificadas durante o pedido.">
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Restrições alimentares</h2><p class="mt-1 text-sm text-slate-500">Informações de maior severidade, sempre verificadas durante o pedido.</p></template>
           <Alert variants="warning" size="small" description="Restrições não são preferências e nunca devem ser ignoradas silenciosamente."><template #icon><TriangleAlertIcon /></template></Alert>
           <MultiSelect v-model="dietaryRestrictions" class="mt-4" label="Restrições" :options="restrictionOptions" placeholder="Nenhuma restrição" />
-        </SectionCard>
+        </Card>
 
-        <SectionCard title="Observações" description="Registre informações eventuais sem transformá-las em regras."><Textarea id="customer-notes" v-model="notes" label="Observação livre" :rows="4" placeholder="Ex.: Confirmar antes de enviar..." /></SectionCard>
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Observações</h2><p class="mt-1 text-sm text-slate-500">Registre informações eventuais sem transformá-las em regras.</p></template><Textarea id="customer-notes" v-model="notes" label="Observação livre" :rows="4" placeholder="Ex.: Confirmar antes de enviar..." /></Card>
       </div>
 
       <aside class="space-y-4 lg:sticky lg:top-20">
-        <SectionCard title="Preferências operacionais" description="Defaults atuais; o pedido preserva o que realmente acontecer.">
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Preferências operacionais</h2><p class="mt-1 text-sm text-slate-500">Defaults atuais; o pedido preserva o que realmente acontecer.</p></template>
           <div class="space-y-4"><Input v-model="preferredDeliveryPerson" label="Entregador preferencial" placeholder="Sem preferência" /><Input v-model="preferredPaymentCondition" label="Condição de pagamento" placeholder="Ex.: À vista" /><Input v-model="preferredPaymentMethod" label="Forma de pagamento" placeholder="Ex.: Pix" /></div>
-        </SectionCard>
-        <SectionCard title="Resumo"><dl class="space-y-2 text-sm"><div class="flex justify-between gap-3"><dt>Endereços</dt><dd class="font-medium text-slate-800">{{ addresses.length }}</dd></div><div class="flex justify-between gap-3"><dt>Preferências</dt><dd class="font-medium text-slate-800">{{ preferences.length }}</dd></div><div class="flex justify-between gap-3"><dt>Restrições</dt><dd><Badge :variant="dietaryRestrictions.length ? 'warning' : 'neutral'">{{ dietaryRestrictions.length }}</Badge></dd></div></dl><template #footer><Button type="submit" class="w-full" :loading="saving">{{ props.mode === 'edit' ? 'Salvar alterações' : 'Salvar cliente' }}</Button></template></SectionCard>
+        </Card>
+        <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Resumo</h2></template><dl class="space-y-2 text-sm"><div class="flex justify-between gap-3"><dt>Endereços</dt><dd class="font-medium text-slate-800">{{ addresses.length }}</dd></div><div class="flex justify-between gap-3"><dt>Preferências</dt><dd class="font-medium text-slate-800">{{ preferences.length }}</dd></div><div class="flex justify-between gap-3"><dt>Restrições</dt><dd><Badge :variant="dietaryRestrictions.length ? 'warning' : 'neutral'">{{ dietaryRestrictions.length }}</Badge></dd></div></dl><template #footer><Button type="submit" class="w-full" :loading="saving">{{ props.mode === 'edit' ? 'Salvar alterações' : 'Salvar cliente' }}</Button></template></Card>
       </aside>
     </div>
 
