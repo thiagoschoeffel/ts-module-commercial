@@ -1,7 +1,7 @@
 # TS Module Commercial
 
 Aplicação independente que expõe `CommercialPage.vue` por Module Federation.
-O módulo contém as experiências de Clientes, Cardápios e Planos e Créditos,
+O módulo contém as experiências de Clientes, Cardápios, Planos e Créditos e Financeiro,
 com mocks locais persistidos no navegador apenas para demonstração.
 
 A preferência de entregador do Cliente usa o identificador do cadastro mantido
@@ -37,6 +37,21 @@ Os dados demonstrativos usam as chaves `ts-commercial-plans-v1`,
 faz parte deste recorte e permanece separado do crédito de plano.
 
 Estados previsíveis podem ser revisados com `?mock=sem-planos`,
+`?mock=sem-resultados` e `?mock=erro`.
+
+## Financeiro
+
+A rota `/financeiro` separa cobranças, pagamentos e crédito financeiro. Um
+pagamento pode ser alocado parcialmente em várias cobranças do mesmo cliente;
+o valor recebido e não alocado gera automaticamente uma movimentação positiva
+no extrato de crédito financeiro. Cliente, pedido, valores e responsável são
+preservados como histórico demonstrativo.
+
+Os pagamentos, alocações e créditos usam, respectivamente, as chaves
+`ts-commercial-financial-payments-v1`,
+`ts-commercial-financial-allocations-v1` e
+`ts-commercial-financial-credit-movements-v1` do `localStorage`. Estados
+previsíveis podem ser revisados com `?mock=sem-financeiro`,
 `?mock=sem-resultados` e `?mock=erro`.
 
 ```bash

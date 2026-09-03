@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   ArrowRightIcon, Badge, BadgeDollarSignIcon, Button, Card, DataTable, EmptyState,
-  Input, Pagination, sanitizeRichText, SearchIcon, Tabs, TriangleAlertIcon, type DataTableColumn, type DataTableRow,
+  Input, Pagination, PlusIcon, sanitizeRichText, SearchIcon, Tabs, TriangleAlertIcon, type DataTableColumn, type DataTableRow,
   type DataTableSortDirection, type TabItem
 } from '@thiagoschoeffel/ts-components'
 import { getAcquisitionsWithBalance, getCreditMovements, getPlans } from '../mocks/planStore'
@@ -56,6 +56,47 @@ const tabs: TabItem[] = [
   { value: 'aquisicoes', label: 'Aquisições' },
   { value: 'extrato', label: 'Extrato' }
 ]
+const filterTabsByView: Record<PlanCreditsView, TabItem[]> = {
+  planos: [
+    { value: 'todos', label: 'Todos' },
+    { value: 'ativos', label: 'Ativos' },
+    { value: 'inativos', label: 'Inativos' }
+  ],
+  aquisicoes: [
+    { value: 'todos', label: 'Todas' },
+    { value: 'com-saldo', label: 'Com saldo' },
+    { value: 'sem-saldo', label: 'Sem saldo' },
+    { value: 'expiradas', label: 'Expiradas' }
+  ],
+  extrato: [
+    { value: 'todos', label: 'Todos' },
+    { value: 'acquired', label: 'Aquisições' },
+    { value: 'consumption', label: 'Consumos' },
+    { value: 'refund', label: 'Estornos' },
+    { value: 'manual-adjustment', label: 'Ajustes' }
+  ]
+}
+const requestedFilter = params.get('filtro') ?? 'todos'
+const activeFilter = ref(filterTabsByView[activeView.value].some(tab => tab.value === requestedFilter) ? requestedFilter : 'todos')
+const filterTabs = computed(() => filterTabsByView[activeView.value])
+const sectionContent: Record<PlanCreditsView, { title: string; subtitle: string; action: string }> = {
+  planos: {
+    title: 'Planos',
+    subtitle: 'Configure os benefícios e as condições padrão disponíveis para contratação.',
+    action: 'Novo plano'
+  },
+  aquisicoes: {
+    title: 'Aquisições',
+    subtitle: 'Consulte e registre as compras de planos preservadas no histórico.',
+    action: 'Nova aquisição'
+  },
+  extrato: {
+    title: 'Extrato',
+    subtitle: 'Acompanhe aquisições, consumos, estornos e ajustes de créditos.',
+    action: 'Movimentar créditos'
+  }
+}
+const activeContent = computed(() => sectionContent[activeView.value])
 const planColumns: DataTableColumn[] = [
   { key: 'name', label: 'Plano', size: 'large', sortable: true },
   { key: 'benefit', label: 'Benefício', size: 'large', sortable: true },
@@ -79,12 +120,41 @@ const movementColumns: DataTableColumn[] = [
 ]
 
 const normalizedSearch = computed(() => search.value.trim().toLocaleLowerCase('pt-BR'))
-const filteredPlans = computed(() => plans.filter(item => !normalizedSearch.value
+const searchedPlans = computed(() => plans.filter(item => !normalizedSearch.value
   || `${item.id} ${item.name} ${richTextPlainText(item.description)} ${item.benefit.description}`.toLocaleLowerCase('pt-BR').includes(normalizedSearch.value)))
-const filteredAcquisitions = computed(() => acquisitions.filter(item => !normalizedSearch.value
+const searchedAcquisitions = computed(() => acquisitions.filter(item => !normalizedSearch.value
   || `${item.id} ${item.customerNameSnapshot} ${item.planNameSnapshot}`.toLocaleLowerCase('pt-BR').includes(normalizedSearch.value)))
-const filteredMovements = computed(() => movements.filter(item => !normalizedSearch.value
+const searchedMovements = computed(() => movements.filter(item => !normalizedSearch.value
   || `${item.id} ${item.customerNameSnapshot} ${item.planNameSnapshot} ${item.originId}`.toLocaleLowerCase('pt-BR').includes(normalizedSearch.value)))
+const filteredPlans = computed(() => searchedPlans.value.filter(item => activeFilter.value === 'todos'
+  || activeFilter.value === 'ativos' && item.active
+  || activeFilter.value === 'inativos' && !item.active))
+const filteredAcquisitions = computed(() => searchedAcquisitions.value.filter(item => activeFilter.value === 'todos'
+  || activeFilter.value === 'com-saldo' && !item.expired && item.balance > 0
+  || activeFilter.value === 'sem-saldo' && !item.expired && item.balance <= 0
+  || activeFilter.value === 'expiradas' && item.expired))
+const filteredMovements = computed(() => searchedMovements.value.filter(item => activeFilter.value === 'todos' || item.type === activeFilter.value))
+const filterCounts = computed<Record<string, number>>((): Record<string, number> => {
+  if (activeView.value === 'planos') return {
+    todos: searchedPlans.value.length,
+    ativos: searchedPlans.value.filter(item => item.active).length,
+    inativos: searchedPlans.value.filter(item => !item.active).length
+  }
+  if (activeView.value === 'aquisicoes') return {
+    todos: searchedAcquisitions.value.length,
+    'com-saldo': searchedAcquisitions.value.filter(item => !item.expired && item.balance > 0).length,
+    'sem-saldo': searchedAcquisitions.value.filter(item => !item.expired && item.balance <= 0).length,
+    expiradas: searchedAcquisitions.value.filter(item => item.expired).length
+  }
+  return {
+    todos: searchedMovements.value.length,
+    acquired: searchedMovements.value.filter(item => item.type === 'acquired').length,
+    consumption: searchedMovements.value.filter(item => item.type === 'consumption').length,
+    refund: searchedMovements.value.filter(item => item.type === 'refund').length,
+    'manual-adjustment': searchedMovements.value.filter(item => item.type === 'manual-adjustment').length
+  }
+})
+const hasActiveFilters = computed(() => Boolean(search.value.trim()) || activeFilter.value !== 'todos')
 const sortedItems = computed<SortablePlanCredit[]>(() => {
   const source: SortablePlanCredit[] = activeView.value === 'planos'
     ? filteredPlans.value
@@ -107,12 +177,11 @@ const visibleStart = computed(() => allRows.value.length ? (currentPage.value - 
 const visibleEnd = computed(() => Math.min(currentPage.value * itemsPerPage, allRows.value.length))
 const currentColumns = computed(() => activeView.value === 'planos' ? planColumns : activeView.value === 'aquisicoes' ? acquisitionColumns : movementColumns)
 const totalBalance = computed(() => acquisitions.filter(item => !item.expired).reduce((total, item) => total + item.balance, 0))
-const tabCounts = computed<Record<string, number>>(() => ({ planos: plans.length, aquisicoes: acquisitions.length, extrato: movements.length }))
 const emptyTitle = computed(() => hasError.value ? 'Não foi possível carregar Planos e Créditos'
   : activeView.value === 'planos' ? 'Nenhum plano encontrado'
     : activeView.value === 'aquisicoes' ? 'Nenhuma aquisição encontrada' : 'Nenhuma movimentação encontrada')
 const emptyDescription = computed(() => hasError.value ? 'Verifique a conexão e tente novamente.'
-  : search.value.trim() ? 'Nenhum registro corresponde à busca atual.'
+  : hasActiveFilters.value ? 'Nenhum registro corresponde aos filtros atuais.'
     : activeView.value === 'planos' ? 'Cadastre o primeiro plano para definir os benefícios disponíveis.'
       : activeView.value === 'aquisicoes' ? 'As compras de planos dos clientes aparecerão aqui.'
         : 'O saldo será explicado aqui pelas aquisições, consumos, estornos e ajustes.')
@@ -125,13 +194,24 @@ watch(activeView, value => {
   if (value === 'planos') url.searchParams.delete('tab')
   else url.searchParams.set('tab', value)
   url.searchParams.delete('busca')
+  url.searchParams.delete('filtro')
   url.searchParams.delete('pagina')
   url.searchParams.set('ordenar', viewDefaultSort.key)
   url.searchParams.set('direcao', viewDefaultSort.direction)
   search.value = ''
+  activeFilter.value = 'todos'
   currentPage.value = 1
   setLoading()
   window.history.pushState(window.history.state, '', url)
+})
+watch(activeFilter, value => {
+  currentPage.value = 1
+  setLoading()
+  const url = new URL(window.location.href)
+  if (value === 'todos') url.searchParams.delete('filtro')
+  else url.searchParams.set('filtro', value)
+  url.searchParams.delete('pagina')
+  window.history.replaceState(window.history.state, '', url)
 })
 watch(search, value => {
   currentPage.value = 1
@@ -162,6 +242,13 @@ function date(value?: string) { return value ? new Intl.DateTimeFormat('pt-BR').
 function dateTime(value: string) { return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) }
 function movementLabel(type: CreditMovementType) {
   return { acquired: 'Crédito adquirido', consumption: 'Consumo', refund: 'Estorno', 'manual-adjustment': 'Ajuste manual' }[type]
+}
+function filterBadgeVariant(tabValue: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
+  if (tabValue === 'ativos' || tabValue === 'com-saldo' || tabValue === 'acquired') return 'success'
+  if (tabValue === 'inativos' || tabValue === 'expiradas') return 'danger'
+  if (tabValue === 'sem-saldo' || tabValue === 'consumption') return 'warning'
+  if (tabValue === 'refund') return 'info'
+  return 'neutral'
 }
 function setLoading() {
   if (loadingTimeout) clearTimeout(loadingTimeout)
@@ -201,7 +288,16 @@ function asAcquisition(row: DataTableRow) { return row as unknown as Acquisition
 function asMovement(row: DataTableRow) { return row as unknown as CreditMovement }
 function editPlan(id: string) { window.location.assign(`/planos/${id}/editar?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
 function refundMovement(id: string) { window.location.assign(`/planos/movimentacoes/nova?tipo=estorno&movimento=${encodeURIComponent(id)}&retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
-function clearSearch() { search.value = '' }
+function createCurrent() {
+  const returnUrl = encodeURIComponent(`${window.location.pathname}${window.location.search}`)
+  if (activeView.value === 'planos') window.location.assign(`/planos/novo?retorno=${returnUrl}`)
+  else if (activeView.value === 'aquisicoes') window.location.assign(`/planos/aquisicoes/nova?retorno=${returnUrl}`)
+  else window.location.assign(`/planos/movimentacoes/nova?retorno=${returnUrl}`)
+}
+function clearFilters() {
+  search.value = ''
+  activeFilter.value = 'todos'
+}
 function updateSort(state: { key?: string; direction?: DataTableSortDirection }) {
   activeSortKey.value = state.key && sortKeys[activeView.value].includes(state.key) ? state.key : undefined
   activeSortDirection.value = state.direction
@@ -213,10 +309,35 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="md:flex md:h-full md:min-h-0 md:flex-col" aria-label="Planos e Créditos">
+  <Tabs
+    v-model="activeView"
+    class="md:flex md:h-full md:min-h-0 md:flex-col md:[&>div:last-child]:min-h-0 md:[&>div:last-child]:flex-1"
+    :tabs="tabs"
+    variant="primary"
+    aria-label="Seções de Planos e Créditos">
+    <template #content>
+      <div class="pt-4 md:flex md:h-full md:min-h-0 md:flex-col">
+        <div class="flex shrink-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <header class="flex w-full min-w-0 items-start gap-3 text-slate-800">
+            <BadgeDollarSignIcon class="size-8 shrink-0" :stroke-width="1.75" aria-hidden="true" />
+            <div class="min-w-0 flex-1 overflow-hidden">
+              <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap sm:items-start sm:overflow-hidden">
+                <h1 class="m-0 shrink-0 text-xl font-bold leading-none sm:text-2xl">Planos e Créditos</h1>
+                <span class="inline-flex shrink-0 items-center gap-2 sm:min-w-0 sm:shrink">
+                  <ArrowRightIcon class="size-5 shrink-0 text-slate-400" aria-hidden="true" />
+                  <span class="text-xl font-bold leading-tight sm:min-w-0 sm:text-2xl">{{ activeContent.title }}</span>
+                </span>
+              </div>
+              <p class="mt-2 text-sm leading-snug text-slate-400">{{ activeContent.subtitle }}</p>
+            </div>
+          </header>
+          <Button type="button" @click="createCurrent"><template #icon><PlusIcon /></template>{{ activeContent.action }}</Button>
+        </div>
+
+  <section class="mt-6 md:flex md:min-h-0 md:flex-1 md:flex-col" aria-label="Planos e Créditos">
     <Card class="md:shrink-0 [&>div]:p-4">
-      <Tabs v-model="activeView" :tabs="tabs" aria-label="Seções de Planos e Créditos" size="medium">
-        <template #badge="{ tab }"><span class="hidden sm:inline"><Badge size="small" variant="neutral">{{ tabCounts[tab.value] }}</Badge></span></template>
+      <Tabs v-model="activeFilter" :tabs="filterTabs" :aria-label="`Filtros de ${activeContent.title}`" size="medium">
+        <template #badge="{ tab }"><Badge size="small" :variant="filterBadgeVariant(tab.value)">{{ filterCounts[tab.value] }}</Badge></template>
         <template #content>
           <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Input v-model="search" type="search" clearable class="w-full sm:max-w-sm" aria-label="Buscar em Planos e Créditos" placeholder="Buscar cliente, plano ou origem...">
@@ -241,7 +362,7 @@ onBeforeUnmount(() => {
         </template>
         <EmptyState v-else-if="hasError || rows.length === 0" :bordered="false" size="large" :title="emptyTitle" :description="emptyDescription" :role="hasError ? 'alert' : 'status'">
           <template #icon><TriangleAlertIcon v-if="hasError" /><BadgeDollarSignIcon v-else /></template>
-          <template #action><Button v-if="hasError" size="small" variant="secondary" @click="setLoading">Tentar novamente</Button><Button v-else-if="search.trim()" size="small" variant="secondary" @click="clearSearch">Limpar busca</Button></template>
+          <template #action><Button v-if="hasError" size="small" variant="secondary" @click="setLoading">Tentar novamente</Button><Button v-else-if="hasActiveFilters" size="small" variant="secondary" @click="clearFilters">Limpar filtros</Button></template>
         </EmptyState>
         <template v-else>
         <Card v-for="plan in pagePlans" :key="plan.id">
@@ -288,7 +409,7 @@ onBeforeUnmount(() => {
         <template #empty>
           <EmptyState :bordered="false" size="large" :title="emptyTitle" :description="emptyDescription" :role="hasError ? 'alert' : 'status'">
             <template #icon><TriangleAlertIcon v-if="hasError" /><BadgeDollarSignIcon v-else /></template>
-            <template #action><Button v-if="hasError" size="small" variant="secondary" @click="setLoading">Tentar novamente</Button><Button v-else-if="search.trim()" size="small" variant="secondary" @click="clearSearch">Limpar busca</Button></template>
+            <template #action><Button v-if="hasError" size="small" variant="secondary" @click="setLoading">Tentar novamente</Button><Button v-else-if="hasActiveFilters" size="small" variant="secondary" @click="clearFilters">Limpar filtros</Button></template>
           </EmptyState>
         </template>
       </DataTable>
@@ -298,4 +419,7 @@ onBeforeUnmount(() => {
       </div>
     </Card>
   </section>
+      </div>
+    </template>
+  </Tabs>
 </template>

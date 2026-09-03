@@ -13,10 +13,13 @@ import CustomerListPage from './pages/CustomerListPage.vue'
 import MenuFormPage from './pages/MenuFormPage.vue'
 import MenuListPage from './pages/MenuListPage.vue'
 import CreditMovementFormPage from './pages/CreditMovementFormPage.vue'
+import ChargeDetailPage from './pages/ChargeDetailPage.vue'
+import FinancialListPage from './pages/FinancialListPage.vue'
+import PaymentFormPage from './pages/PaymentFormPage.vue'
 import PlanAcquisitionFormPage from './pages/PlanAcquisitionFormPage.vue'
 import PlanCreditsPage from './pages/PlanCreditsPage.vue'
 import PlanFormPage from './pages/PlanFormPage.vue'
-import type { CommercialSection, CustomerPage, MenuPage, PlanPage } from './types/commercial'
+import type { CommercialSection, CustomerPage, FinancialPage, MenuPage, PlanPage } from './types/commercial'
 
 const props = withDefaults(defineProps<{
   section?: CommercialSection
@@ -26,6 +29,8 @@ const props = withDefaults(defineProps<{
   menuDate?: string
   planPage?: PlanPage
   planId?: string
+  financialPage?: FinancialPage
+  chargeId?: string
 }>(), {
   section: 'clientes',
   customerPage: 'list',
@@ -33,13 +38,20 @@ const props = withDefaults(defineProps<{
   menuPage: 'list',
   menuDate: undefined,
   planPage: 'list',
-  planId: undefined
+  planId: undefined,
+  financialPage: 'list',
+  chargeId: undefined
 })
 
 const page = computed(() => commercialPages[props.section])
 const menuListKey = ref(0)
 const customer = computed(() => getCustomer(props.customerId))
 const pageTitle = computed(() => {
+  if (props.section === 'financeiro') {
+    if (props.financialPage === 'new-payment') return 'Registrar pagamento'
+    if (props.financialPage === 'charge-detail') return props.chargeId ? `Cobrança ${props.chargeId}` : 'Detalhe da cobrança'
+    return page.value.title
+  }
   if (props.section === 'planos') {
     if (props.planPage === 'new') return 'Novo plano'
     if (props.planPage === 'edit') return 'Editar plano'
@@ -58,6 +70,11 @@ const pageTitle = computed(() => {
   return page.value.title
 })
 const pageSubtitle = computed(() => {
+  if (props.section === 'financeiro') {
+    if (props.financialPage === 'new-payment') return 'Registre o recebimento e distribua o valor entre as cobranças.'
+    if (props.financialPage === 'charge-detail') return 'Consulte saldo, vencimento e pagamentos alocados.'
+    return page.value.subtitle
+  }
   if (props.section === 'planos') {
     if (props.planPage === 'new' || props.planPage === 'edit') return 'Defina o benefício coberto e as condições padrão.'
     if (props.planPage === 'new-acquisition') return 'Registre a compra preservando as condições contratadas.'
@@ -108,13 +125,17 @@ function planListReturnUrl() {
 }
 
 function returnToPlans() { window.location.assign(planListReturnUrl()) }
-function createPlan() { window.location.assign(`/planos/novo?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
-function createAcquisition() { window.location.assign(`/planos/aquisicoes/nova?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
-function createMovement() { window.location.assign(`/planos/movimentacoes/nova?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+
+function financialListReturnUrl() {
+  const candidate = new URLSearchParams(window.location.search).get('retorno')
+  return candidate && /^\/financeiro(?:\?.*)?$/.test(candidate) ? candidate : '/financeiro'
+}
+function returnToFinancial() { window.location.assign(financialListReturnUrl()) }
 
 const isListPage = computed(() => props.section === 'clientes'
   ? props.customerPage === 'list'
-  : props.section === 'cardapios' ? props.menuPage === 'list' : props.planPage === 'list')
+  : props.section === 'cardapios' ? props.menuPage === 'list'
+    : props.section === 'planos' ? props.planPage === 'list' : props.financialPage === 'list')
 </script>
 
 <template>
@@ -123,7 +144,7 @@ const isListPage = computed(() => props.section === 'clientes'
     :class="isListPage
       ? 'md:flex md:h-[calc(100dvh-11rem)] md:min-h-0 md:flex-col'
       : ''">
-    <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div v-if="!((props.section === 'planos' && props.planPage === 'list') || (props.section === 'financeiro' && props.financialPage === 'list'))" class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
       <PageHeader :title="pageTitle" :subtitle="pageSubtitle">
         <template #icon>
           <component :is="page.icon" :size="32" :stroke-width="1.75" />
@@ -149,6 +170,15 @@ const isListPage = computed(() => props.section === 'clientes'
       </button>
 
       <button
+        v-if="props.section === 'financeiro' && props.financialPage !== 'list'"
+        type="button"
+        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        @click="returnToFinancial">
+        <ChevronLeftIcon class="size-4" aria-hidden="true" />
+        Voltar para financeiro
+      </button>
+
+      <button
         v-if="props.section === 'planos' && props.planPage !== 'list'"
         type="button"
         class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
@@ -166,16 +196,12 @@ const isListPage = computed(() => props.section === 'clientes'
         v-if="props.section === 'cardapios' && props.menuPage === 'list'"
         @imported="refreshMenuList" />
 
-      <div v-if="props.section === 'planos' && props.planPage === 'list'" class="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" @click="createMovement">Movimentar créditos</Button>
-        <Button type="button" variant="secondary" @click="createPlan">Novo plano</Button>
-        <Button type="button" @click="createAcquisition"><template #icon><PlusIcon /></template>Nova aquisição</Button>
-      </div>
     </div>
 
-    <main
-      class="mt-6"
-      :class="isListPage ? 'md:min-h-0 md:flex-1' : ''">
+    <main :class="[
+      (props.section === 'planos' && props.planPage === 'list') || (props.section === 'financeiro' && props.financialPage === 'list') ? '' : 'mt-6',
+      isListPage ? 'md:min-h-0 md:flex-1' : ''
+    ]">
       <template v-if="props.section === 'clientes'">
       <CustomerListPage v-if="props.customerPage === 'list'" />
       <CustomerFormPage
@@ -188,11 +214,16 @@ const isListPage = computed(() => props.section === 'clientes'
         <MenuListPage v-if="props.menuPage === 'list'" :key="menuListKey" />
         <MenuFormPage v-else :mode="props.menuPage === 'new' ? 'create' : 'edit'" :menu-date="props.menuDate" />
       </template>
-      <template v-else>
+      <template v-else-if="props.section === 'planos'">
         <PlanCreditsPage v-if="props.planPage === 'list'" />
         <PlanFormPage v-else-if="props.planPage === 'new' || props.planPage === 'edit'" :mode="props.planPage === 'edit' ? 'edit' : 'create'" :plan-id="props.planId" />
         <PlanAcquisitionFormPage v-else-if="props.planPage === 'new-acquisition'" />
         <CreditMovementFormPage v-else />
+      </template>
+      <template v-else>
+        <FinancialListPage v-if="props.financialPage === 'list'" />
+        <ChargeDetailPage v-else-if="props.financialPage === 'charge-detail'" :charge-id="props.chargeId" />
+        <PaymentFormPage v-else />
       </template>
     </main>
   </div>

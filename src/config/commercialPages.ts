@@ -1,4 +1,4 @@
-import { BadgeDollarSignIcon, BookOpenIcon, UsersIcon } from '@thiagoschoeffel/ts-components'
+import { BadgeDollarSignIcon, BookOpenIcon, CircleDollarSignIcon, UsersIcon } from '@thiagoschoeffel/ts-components'
 import type { CommercialPageConfig, CommercialSection } from '../types/commercial'
 
 export const commercialPages: Record<CommercialSection, CommercialPageConfig> = {
@@ -11,6 +11,11 @@ export const commercialPages: Record<CommercialSection, CommercialPageConfig> = 
     title: 'Clientes',
     subtitle: 'Cadastros, preferências e restrições para um atendimento mais rápido.',
     icon: UsersIcon
+  },
+  financeiro: {
+    title: 'Financeiro',
+    subtitle: 'Acompanhe cobranças, recebimentos, alocações e o crédito financeiro dos clientes.',
+    icon: CircleDollarSignIcon
   },
   planos: {
     title: 'Planos e Créditos',
