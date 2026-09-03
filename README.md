@@ -11,6 +11,12 @@ em `/cardapios`. Ofertas e produzíveis partem do Catálogo de Gestão e são
 preservados como snapshots no cardápio. A persistência demonstrativa usa a chave
 `ts-commercial-daily-menus-v1` do `localStorage`.
 
+Na listagem de cardápios, a ação **Importar planilha** disponibiliza um modelo
+`.xlsx` preenchido com o catálogo atual. As abas `Opções` e `Ofertas` aceitam
+vários dias no mesmo arquivo. Antes da confirmação, o módulo valida datas,
+categorias, itens produzíveis, ofertas, preços e disponibilidade. Os cardápios
+válidos são criados como rascunho e dias já existentes nunca são substituídos.
+
 Estados previsíveis do calendário podem ser revisados com `?mock=sem-cardapios`
 e `?mock=erro`.
 

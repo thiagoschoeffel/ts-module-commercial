@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Button, ChevronLeftIcon, PageHeader, PlusIcon } from '@thiagoschoeffel/ts-components'
 import '@thiagoschoeffel/ts-components/style.css'
 import './style.css'
 import { commercialPages } from './config/commercialPages'
+import MenuSpreadsheetImport from './components/menu/MenuSpreadsheetImport.vue'
 import { getCustomer } from './mocks/customerStore'
 import { formatMenuDate } from './mocks/menuStore'
 import CustomerDetailPage from './pages/CustomerDetailPage.vue'
@@ -28,6 +29,7 @@ const props = withDefaults(defineProps<{
 })
 
 const page = computed(() => commercialPages[props.section])
+const menuListKey = ref(0)
 const customer = computed(() => getCustomer(props.customerId))
 const pageTitle = computed(() => {
   if (props.section === 'cardapios') {
@@ -75,6 +77,10 @@ function returnToMenus() {
   window.location.assign(menuListReturnUrl())
 }
 
+function refreshMenuList() {
+  menuListKey.value += 1
+}
+
 const isListPage = computed(() => props.section === 'clientes'
   ? props.customerPage === 'list'
   : props.menuPage === 'list')
@@ -115,6 +121,10 @@ const isListPage = computed(() => props.section === 'clientes'
         <template #icon><PlusIcon /></template>
         Novo cliente
       </Button>
+
+      <MenuSpreadsheetImport
+        v-if="props.section === 'cardapios' && props.menuPage === 'list'"
+        @imported="refreshMenuList" />
     </div>
 
     <main
@@ -129,7 +139,7 @@ const isListPage = computed(() => props.section === 'clientes'
       <CustomerDetailPage v-else :customer-id="props.customerId" />
       </template>
       <template v-else>
-        <MenuListPage v-if="props.menuPage === 'list'" />
+        <MenuListPage v-if="props.menuPage === 'list'" :key="menuListKey" />
         <MenuFormPage v-else :mode="props.menuPage === 'new' ? 'create' : 'edit'" :menu-date="props.menuDate" />
       </template>
     </main>
