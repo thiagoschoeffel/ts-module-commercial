@@ -1,8 +1,12 @@
 # TS Module Commercial
 
 Aplicação independente que expõe `CommercialPage.vue` por Module Federation.
-Nesta primeira versão, o módulo contém a experiência de Clientes e usa mocks
-locais persistidos no navegador apenas para demonstração.
+O módulo contém as experiências de Clientes, Cardápios e Planos e Créditos,
+com mocks locais persistidos no navegador apenas para demonstração.
+
+A preferência de entregador do Cliente usa o identificador do cadastro mantido
+em Gestão. Somente entregadores ativos podem ser escolhidos; uma preferência já
+existente continua visível caso o entregador seja inativado.
 
 ## Cardápios
 
@@ -19,6 +23,21 @@ válidos são criados como rascunho e dias já existentes nunca são substituíd
 
 Estados previsíveis do calendário podem ser revisados com `?mock=sem-cardapios`
 e `?mock=erro`.
+
+## Planos e Créditos
+
+A rota `/planos` reúne cadastro de planos, aquisições de clientes e extrato de
+créditos. Cada aquisição preserva um snapshot do benefício e das condições
+contratadas. O consumo é vinculado ao pedido e distribuído por FIFO entre as
+aquisições elegíveis; o estorno retorna à aquisição do consumo original.
+
+Os dados demonstrativos usam as chaves `ts-commercial-plans-v1`,
+`ts-commercial-plan-acquisitions-v1` e
+`ts-commercial-credit-movements-v1` do `localStorage`. Crédito financeiro não
+faz parte deste recorte e permanece separado do crédito de plano.
+
+Estados previsíveis podem ser revisados com `?mock=sem-planos`,
+`?mock=sem-resultados` e `?mock=erro`.
 
 ```bash
 npm install

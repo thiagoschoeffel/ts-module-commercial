@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Alert, Badge, Button, Card, ChevronLeftIcon, EmptyState, InfoIcon, sanitizeRichText, TriangleAlertIcon, UsersIcon } from '@thiagoschoeffel/ts-components'
 import { formatFullAddress, getCustomer } from '../mocks/customerStore'
+import { findDeliveryDriver } from '../mocks/deliveryDriverSource'
 
 const props = defineProps<{ customerId?: string }>()
 const loading = ref(true)
@@ -9,6 +10,13 @@ const failed = ref(false)
 let loadingTimeout: ReturnType<typeof setTimeout> | undefined
 const customer = computed(() => getCustomer(props.customerId))
 const sanitizedCustomerNotes = computed(() => sanitizeRichText(customer.value?.notes ?? ''))
+const preferredDeliveryDriverName = computed(() => {
+  const current = customer.value
+  if (!current) return 'Sem preferência'
+  return findDeliveryDriver(current.preferredDeliveryDriverId)?.name
+    ?? current.preferredDeliveryPerson
+    ?? 'Sem preferência'
+})
 
 function load() { failed.value = false; loading.value = true; if (loadingTimeout) clearTimeout(loadingTimeout); loadingTimeout = setTimeout(() => loading.value = false, 300) }
 function returnUrl() { const candidate = new URLSearchParams(window.location.search).get('retorno'); return candidate && /^\/clientes(?:\?.*)?$/.test(candidate) ? candidate : '/clientes' }
@@ -86,7 +94,7 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
               <p class="mt-1 text-sm text-slate-500">Defaults atuais, não fatos históricos.</p>
             </template>
             <dl class="space-y-3">
-              <div><dt class="text-xs font-medium uppercase tracking-wide text-slate-400">Entregador</dt><dd class="mt-1 text-slate-700">{{ customer.preferredDeliveryPerson || 'Sem preferência' }}</dd></div>
+              <div><dt class="text-xs font-medium uppercase tracking-wide text-slate-400">Entregador</dt><dd class="mt-1 text-slate-700">{{ preferredDeliveryDriverName }}</dd></div>
               <div><dt class="text-xs font-medium uppercase tracking-wide text-slate-400">Pagamento</dt><dd class="mt-1 text-slate-700">{{ [customer.preferredPaymentCondition, customer.preferredPaymentMethod].filter(Boolean).join(' · ') || 'Sem preferência' }}</dd></div>
             </dl>
           </Card>

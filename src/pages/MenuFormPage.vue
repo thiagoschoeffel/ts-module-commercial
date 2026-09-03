@@ -228,7 +228,7 @@ onBeforeUnmount(() => {
         </Card>
       </div>
 
-      <aside class="space-y-4 lg:sticky lg:top-20">
+      <aside class="space-y-4 lg:sticky lg:top-6">
         <Card>
           <template #header><div class="flex items-center justify-between gap-3"><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Resumo</h2><Badge size="medium" :variant="draft.status === 'published' ? 'success' : 'neutral'">{{ draft.status === 'published' ? 'Publicado' : 'Rascunho' }}</Badge></div></template>
           <dl class="space-y-3 text-sm">

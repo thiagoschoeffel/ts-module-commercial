@@ -5,6 +5,7 @@ import {
   MultiSelect, Select, Textarea, TriangleAlertIcon, type MultiSelectOption
 } from '@thiagoschoeffel/ts-components'
 import { getCustomer, nextCustomerId, saveCustomer } from '../mocks/customerStore'
+import { findDeliveryDriverByName, getDeliveryDrivers } from '../mocks/deliveryDriverSource'
 import type { CustomerAddress, CustomerDetail, CustomerPreference } from '../types/customer'
 
 const props = withDefaults(defineProps<{ mode?: 'create' | 'edit'; customerId?: string }>(), {
@@ -19,7 +20,8 @@ const addresses = ref<CustomerAddress[]>([])
 const preferences = ref<CustomerPreference[]>([])
 const dietaryRestrictions = ref<string[]>([])
 const noPreferenceValue = '__none__'
-const preferredDeliveryPerson = ref(noPreferenceValue)
+const legacyDriverPrefix = 'legacy:'
+const preferredDeliveryDriver = ref(noPreferenceValue)
 const preferredPaymentCondition = ref(noPreferenceValue)
 const preferredPaymentMethod = ref(noPreferenceValue)
 const preferenceDraft = ref('')
@@ -35,10 +37,7 @@ const initialSnapshot = ref('')
 let navigationTimeout: ReturnType<typeof setTimeout> | undefined
 
 const restrictionOptions: MultiSelectOption[] = ['Lactose', 'Glúten', 'Amendoim', 'Castanhas', 'Ovo', 'Soja'].map(label => ({ value: label, label }))
-const deliveryPersonOptions = [
-  { value: noPreferenceValue, label: 'Sem preferência' },
-  { value: 'Carlos Souza', label: 'Carlos Souza' }
-]
+const deliveryDrivers = getDeliveryDrivers()
 const paymentConditionOptions = [
   { value: noPreferenceValue, label: 'Sem preferência' },
   { value: 'À vista', label: 'À vista' },
@@ -57,14 +56,23 @@ function optionsWithLegacyValue(options: { value: string; label: string }[], val
     return options
   return [...options, { value, label: `${value} (cadastrado anteriormente)` }]
 }
-const deliveryPersonSelectOptions = computed(() => optionsWithLegacyValue(deliveryPersonOptions, preferredDeliveryPerson.value))
+const deliveryDriverSelectOptions = computed(() => {
+  const selectedDriverId = preferredDeliveryDriver.value
+  const options = deliveryDrivers
+    .filter(driver => driver.active || driver.id === selectedDriverId)
+    .sort((first, second) => first.name.localeCompare(second.name, 'pt-BR', { sensitivity: 'base' }))
+    .map(driver => ({ value: driver.id, label: `${driver.name}${driver.active ? '' : ' (inativo)'}` }))
+  if (selectedDriverId.startsWith(legacyDriverPrefix))
+    options.push({ value: selectedDriverId, label: `${selectedDriverId.slice(legacyDriverPrefix.length)} (cadastro anterior)` })
+  return [{ value: noPreferenceValue, label: 'Sem preferência' }, ...options]
+})
 const paymentConditionSelectOptions = computed(() => optionsWithLegacyValue(paymentConditionOptions, preferredPaymentCondition.value))
 const paymentMethodSelectOptions = computed(() => optionsWithLegacyValue(paymentMethodOptions, preferredPaymentMethod.value))
 const stateOptions = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
   'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
 ].map(state => ({ value: state, label: state }))
-const snapshot = computed(() => JSON.stringify({ name: name.value, phone: phone.value, active: active.value, notes: notes.value, addresses: addresses.value, preferences: preferences.value, dietaryRestrictions: dietaryRestrictions.value, preferredDeliveryPerson: preferredDeliveryPerson.value, preferredPaymentCondition: preferredPaymentCondition.value, preferredPaymentMethod: preferredPaymentMethod.value }))
+const snapshot = computed(() => JSON.stringify({ name: name.value, phone: phone.value, active: active.value, notes: notes.value, addresses: addresses.value, preferences: preferences.value, dietaryRestrictions: dietaryRestrictions.value, preferredDeliveryDriver: preferredDeliveryDriver.value, preferredPaymentCondition: preferredPaymentCondition.value, preferredPaymentMethod: preferredPaymentMethod.value }))
 const isDirty = computed(() => initialSnapshot.value ? snapshot.value !== initialSnapshot.value : Boolean(name.value || phone.value || notes.value || addresses.value.length || preferences.value.length || dietaryRestrictions.value.length))
 const nameError = computed(() => showValidation.value && !name.value.trim() ? 'Informe o nome do cliente.' : undefined)
 const phoneError = computed(() => showValidation.value && phone.value.replace(/\D/g, '').length < 10 ? 'Informe um telefone válido com DDD.' : undefined)
@@ -172,7 +180,12 @@ function save() {
     id, name: name.value.trim(), phone: phone.value.trim(), active: active.value,
     notes: notes.value.trim() || undefined, addresses: structuredClone(toRaw(addresses.value)),
     preferences: structuredClone(toRaw(preferences.value)), dietaryRestrictions: [...dietaryRestrictions.value],
-    preferredDeliveryPerson: optionalPreference(preferredDeliveryPerson.value),
+    preferredDeliveryDriverId: preferredDeliveryDriver.value !== noPreferenceValue && !preferredDeliveryDriver.value.startsWith(legacyDriverPrefix)
+      ? preferredDeliveryDriver.value
+      : undefined,
+    preferredDeliveryPerson: preferredDeliveryDriver.value.startsWith(legacyDriverPrefix)
+      ? preferredDeliveryDriver.value.slice(legacyDriverPrefix.length)
+      : undefined,
     preferredPaymentCondition: optionalPreference(preferredPaymentCondition.value),
     preferredPaymentMethod: optionalPreference(preferredPaymentMethod.value)
   }
@@ -195,7 +208,11 @@ onMounted(() => {
   if (customer) {
     name.value = customer.name; phone.value = formatPhone(customer.phone); active.value = customer.active; notes.value = customer.notes ?? ''
     addresses.value = structuredClone(customer.addresses); preferences.value = structuredClone(customer.preferences)
-    dietaryRestrictions.value = [...customer.dietaryRestrictions]; preferredDeliveryPerson.value = customer.preferredDeliveryPerson ?? noPreferenceValue
+    dietaryRestrictions.value = [...customer.dietaryRestrictions]
+    const legacyDriver = findDeliveryDriverByName(customer.preferredDeliveryPerson)
+    preferredDeliveryDriver.value = customer.preferredDeliveryDriverId
+      ?? legacyDriver?.id
+      ?? (customer.preferredDeliveryPerson ? `${legacyDriverPrefix}${customer.preferredDeliveryPerson}` : noPreferenceValue)
     preferredPaymentCondition.value = customer.preferredPaymentCondition ?? noPreferenceValue
     preferredPaymentMethod.value = customer.preferredPaymentMethod === 'Cartão'
       ? 'Cartão de crédito'
@@ -351,10 +368,10 @@ watch(addressDrawerOpen, open => { if (!open) clearAddressDraft() })
         <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Observações</h2><p class="mt-1 text-sm text-slate-500">Registre informações eventuais sem transformá-las em regras.</p></template><Textarea id="customer-notes" v-model="notes" label="Observação livre" rich-text :rows="4" placeholder="Ex.: Confirmar antes de enviar..." /></Card>
       </div>
 
-      <aside class="space-y-4 lg:sticky lg:top-20">
+      <aside class="space-y-4 lg:sticky lg:top-6">
         <Card><template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Preferências operacionais</h2><p class="mt-1 text-sm text-slate-500">Defaults atuais; o pedido preserva o que realmente acontecer.</p></template>
           <div class="space-y-4">
-            <Select v-model="preferredDeliveryPerson" label="Entregador preferencial" :options="deliveryPersonSelectOptions" />
+            <Select v-model="preferredDeliveryDriver" label="Entregador preferencial" :options="deliveryDriverSelectOptions" />
             <Select v-model="preferredPaymentCondition" label="Condição de pagamento" :options="paymentConditionSelectOptions" />
             <Select v-model="preferredPaymentMethod" label="Forma de pagamento" :options="paymentMethodSelectOptions" />
           </div>

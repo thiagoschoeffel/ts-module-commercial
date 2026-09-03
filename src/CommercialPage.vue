@@ -12,7 +12,11 @@ import CustomerFormPage from './pages/CustomerFormPage.vue'
 import CustomerListPage from './pages/CustomerListPage.vue'
 import MenuFormPage from './pages/MenuFormPage.vue'
 import MenuListPage from './pages/MenuListPage.vue'
-import type { CommercialSection, CustomerPage, MenuPage } from './types/commercial'
+import CreditMovementFormPage from './pages/CreditMovementFormPage.vue'
+import PlanAcquisitionFormPage from './pages/PlanAcquisitionFormPage.vue'
+import PlanCreditsPage from './pages/PlanCreditsPage.vue'
+import PlanFormPage from './pages/PlanFormPage.vue'
+import type { CommercialSection, CustomerPage, MenuPage, PlanPage } from './types/commercial'
 
 const props = withDefaults(defineProps<{
   section?: CommercialSection
@@ -20,18 +24,29 @@ const props = withDefaults(defineProps<{
   customerId?: string
   menuPage?: MenuPage
   menuDate?: string
+  planPage?: PlanPage
+  planId?: string
 }>(), {
   section: 'clientes',
   customerPage: 'list',
   customerId: undefined,
   menuPage: 'list',
-  menuDate: undefined
+  menuDate: undefined,
+  planPage: 'list',
+  planId: undefined
 })
 
 const page = computed(() => commercialPages[props.section])
 const menuListKey = ref(0)
 const customer = computed(() => getCustomer(props.customerId))
 const pageTitle = computed(() => {
+  if (props.section === 'planos') {
+    if (props.planPage === 'new') return 'Novo plano'
+    if (props.planPage === 'edit') return 'Editar plano'
+    if (props.planPage === 'new-acquisition') return 'Nova aquisição'
+    if (props.planPage === 'new-movement') return 'Nova movimentação'
+    return page.value.title
+  }
   if (props.section === 'cardapios') {
     if (props.menuPage === 'new') return 'Novo cardápio'
     if (props.menuPage === 'edit' && props.menuDate) return `Cardápio de ${formatMenuDate(props.menuDate)}`
@@ -43,6 +58,12 @@ const pageTitle = computed(() => {
   return page.value.title
 })
 const pageSubtitle = computed(() => {
+  if (props.section === 'planos') {
+    if (props.planPage === 'new' || props.planPage === 'edit') return 'Defina o benefício coberto e as condições padrão.'
+    if (props.planPage === 'new-acquisition') return 'Registre a compra preservando as condições contratadas.'
+    if (props.planPage === 'new-movement') return 'Consuma ou estorne créditos com origem rastreável.'
+    return page.value.subtitle
+  }
   if (props.section === 'cardapios') {
     if (props.menuPage === 'new') return 'Monte as opções e ofertas de um novo dia operacional.'
     if (props.menuPage === 'edit' && props.menuDate) return formatMenuDate(props.menuDate, true)
@@ -81,9 +102,19 @@ function refreshMenuList() {
   menuListKey.value += 1
 }
 
+function planListReturnUrl() {
+  const candidate = new URLSearchParams(window.location.search).get('retorno')
+  return candidate && /^\/planos(?:\?.*)?$/.test(candidate) ? candidate : '/planos'
+}
+
+function returnToPlans() { window.location.assign(planListReturnUrl()) }
+function createPlan() { window.location.assign(`/planos/novo?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+function createAcquisition() { window.location.assign(`/planos/aquisicoes/nova?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+function createMovement() { window.location.assign(`/planos/movimentacoes/nova?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+
 const isListPage = computed(() => props.section === 'clientes'
   ? props.customerPage === 'list'
-  : props.menuPage === 'list')
+  : props.section === 'cardapios' ? props.menuPage === 'list' : props.planPage === 'list')
 </script>
 
 <template>
@@ -117,6 +148,15 @@ const isListPage = computed(() => props.section === 'clientes'
         Voltar para cardápios
       </button>
 
+      <button
+        v-if="props.section === 'planos' && props.planPage !== 'list'"
+        type="button"
+        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        @click="returnToPlans">
+        <ChevronLeftIcon class="size-4" aria-hidden="true" />
+        Voltar para planos e créditos
+      </button>
+
       <Button v-if="props.section === 'clientes' && props.customerPage === 'list'" type="button" @click="createCustomer">
         <template #icon><PlusIcon /></template>
         Novo cliente
@@ -125,6 +165,12 @@ const isListPage = computed(() => props.section === 'clientes'
       <MenuSpreadsheetImport
         v-if="props.section === 'cardapios' && props.menuPage === 'list'"
         @imported="refreshMenuList" />
+
+      <div v-if="props.section === 'planos' && props.planPage === 'list'" class="flex flex-wrap gap-2">
+        <Button type="button" variant="secondary" @click="createMovement">Movimentar créditos</Button>
+        <Button type="button" variant="secondary" @click="createPlan">Novo plano</Button>
+        <Button type="button" @click="createAcquisition"><template #icon><PlusIcon /></template>Nova aquisição</Button>
+      </div>
     </div>
 
     <main
@@ -138,9 +184,15 @@ const isListPage = computed(() => props.section === 'clientes'
         :customer-id="props.customerId" />
       <CustomerDetailPage v-else :customer-id="props.customerId" />
       </template>
-      <template v-else>
+      <template v-else-if="props.section === 'cardapios'">
         <MenuListPage v-if="props.menuPage === 'list'" :key="menuListKey" />
         <MenuFormPage v-else :mode="props.menuPage === 'new' ? 'create' : 'edit'" :menu-date="props.menuDate" />
+      </template>
+      <template v-else>
+        <PlanCreditsPage v-if="props.planPage === 'list'" />
+        <PlanFormPage v-else-if="props.planPage === 'new' || props.planPage === 'edit'" :mode="props.planPage === 'edit' ? 'edit' : 'create'" :plan-id="props.planId" />
+        <PlanAcquisitionFormPage v-else-if="props.planPage === 'new-acquisition'" />
+        <CreditMovementFormPage v-else />
       </template>
     </main>
   </div>

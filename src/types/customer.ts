@@ -25,6 +25,8 @@ export interface CustomerDetail {
   addresses: CustomerAddress[]
   preferences: CustomerPreference[]
   dietaryRestrictions: string[]
+  preferredDeliveryDriverId?: string
+  /** Nome legado mantido somente para leitura de cadastros anteriores. */
   preferredDeliveryPerson?: string
   preferredPaymentCondition?: string
   preferredPaymentMethod?: string
