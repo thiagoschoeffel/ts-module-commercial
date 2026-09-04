@@ -7,6 +7,7 @@ import {
 } from '@thiagoschoeffel/ts-components'
 import { getCustomerSummaries } from '../mocks/customerStore'
 import { getChargesWithBalance, registerPayment } from '../mocks/financialStore'
+import { localDateIso } from '../mocks/menuStore'
 import type { PaymentMethod } from '../types/financial'
 
 const customers = getCustomerSummaries().filter(customer => customer.active)
@@ -19,7 +20,7 @@ const methodOptions = [
   { value: 'debit-card', label: 'Cartão de débito' }, { value: 'credit-card', label: 'Cartão de crédito' },
   { value: 'bank-transfer', label: 'Transferência bancária' }
 ]
-const today = new Date().toISOString().slice(0, 10)
+const today = localDateIso()
 const currentResponsible = 'Administrador'
 const requestedCharge = outstandingCharges.find(charge => charge.id === new URLSearchParams(window.location.search).get('cobranca'))
 const customerId = ref(requestedCharge?.customerId ?? '')
