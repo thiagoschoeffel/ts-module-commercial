@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
     aria-label="Seções de Planos e Créditos">
     <template #content>
       <div class="pt-4 md:flex md:h-full md:min-h-0 md:flex-col">
-        <div class="flex shrink-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="ts-responsive-row shrink-0 gap-4">
           <header class="flex w-full min-w-0 items-start gap-3 text-slate-800">
             <BadgeDollarSignIcon class="size-8 shrink-0" :stroke-width="1.75" aria-hidden="true" />
             <div class="min-w-0 flex-1 overflow-hidden">
@@ -340,7 +340,7 @@ onBeforeUnmount(() => {
       <Tabs v-model="activeFilter" :tabs="filterTabs" :aria-label="`Filtros de ${activeContent.title}`" size="medium">
         <template #badge="{ tab }"><Badge size="small" :variant="filterBadgeVariant(tab.value)">{{ filterCounts[tab.value] }}</Badge></template>
         <template #content>
-          <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="ts-responsive-row w-full gap-3">
             <Input v-model="search" type="search" clearable class="w-full sm:max-w-sm" aria-label="Buscar em Planos e Créditos" placeholder="Buscar cliente, plano ou origem...">
               <template #leading><SearchIcon class="size-4 text-slate-400" aria-hidden="true" /></template>
             </Input>

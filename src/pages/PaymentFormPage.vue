@@ -122,7 +122,7 @@ function submit() {
         </Card>
 
         <Card>
-          <template #header><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 class="font-semibold text-slate-900">Alocação em cobranças</h2><p class="mt-1 text-sm text-slate-500">Um pagamento pode quitar uma ou várias cobranças do mesmo cliente.</p></div><Button v-if="customerCharges.length" type="button" size="small" variant="secondary" :disabled="amountNumber <= 0" @click="allocateOldestFirst">Alocar mais antigas</Button></div></template>
+          <template #header><div class="ts-responsive-row-start gap-3"><div><h2 class="font-semibold text-slate-900">Alocação em cobranças</h2><p class="mt-1 text-sm text-slate-500">Um pagamento pode quitar uma ou várias cobranças do mesmo cliente.</p></div><Button v-if="customerCharges.length" type="button" size="small" variant="secondary" :disabled="amountNumber <= 0" @click="allocateOldestFirst">Alocar mais antigas</Button></div></template>
           <div v-if="!customerId" class="py-6 text-center text-sm text-slate-500">Selecione o cliente para consultar suas cobranças em aberto.</div>
           <div v-else-if="customerCharges.length === 0" class="py-6 text-center text-sm text-slate-500">Este cliente não possui cobranças em aberto.</div>
           <div v-else class="space-y-3">

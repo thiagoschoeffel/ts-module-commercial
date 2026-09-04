@@ -196,7 +196,7 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
     aria-label="Seções do Financeiro">
     <template #content>
       <div class="pt-4 md:flex md:h-full md:min-h-0 md:flex-col">
-        <div class="flex shrink-0 flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="ts-responsive-row shrink-0 gap-4">
           <header class="flex w-full min-w-0 items-start gap-3 text-slate-800">
             <CircleDollarSignIcon class="size-8 shrink-0" :stroke-width="1.75" aria-hidden="true" />
             <div class="min-w-0 flex-1 overflow-hidden">
@@ -265,7 +265,7 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
           <template v-if="activeView === 'cobrancas'" #actions="{ row }"><Button size="small" variant="secondary" @click="openCharge(asCharge(row).id)">Ver<template #trailingIcon><ArrowRightIcon /></template></Button></template>
         </DataTable>
 
-        <div v-if="!isLoading && sortedItems.length" class="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><p>Exibindo {{ visibleStart }}–{{ visibleEnd }} de {{ sortedItems.length }}</p><Pagination v-model:page="currentPage" :total="sortedItems.length" :items-per-page="itemsPerPage" /></div>
+        <div v-if="!isLoading && sortedItems.length" class="ts-responsive-row mt-4 gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500"><p>Exibindo {{ visibleStart }}–{{ visibleEnd }} de {{ sortedItems.length }}</p><Pagination v-model:page="currentPage" :total="sortedItems.length" :items-per-page="itemsPerPage" /></div>
       </template>
     </Card>
     <div class="h-6 shrink-0" aria-hidden="true" />

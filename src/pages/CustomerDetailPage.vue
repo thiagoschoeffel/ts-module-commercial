@@ -57,7 +57,7 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
     </EmptyState>
 
     <template v-else>
-      <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="ts-responsive-row mb-5 gap-4">
         <div class="flex items-center gap-2">
           <Badge size="medium" :variant="customer.active ? 'success' : 'danger'">
             {{ customer.active ? 'Ativo' : 'Inativo' }}
