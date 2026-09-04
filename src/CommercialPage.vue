@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Button, ChevronLeftIcon, PageHeader, PlusIcon } from '@thiagoschoeffel/ts-components'
+import { AlertDialog, Button, CalendarDaysIcon, ChevronLeftIcon, PageHeader, PlusIcon } from '@thiagoschoeffel/ts-components'
 import '@thiagoschoeffel/ts-components/style.css'
 import './style.css'
 import { commercialPages } from './config/commercialPages'
@@ -12,6 +12,7 @@ import CustomerFormPage from './pages/CustomerFormPage.vue'
 import CustomerListPage from './pages/CustomerListPage.vue'
 import MenuFormPage from './pages/MenuFormPage.vue'
 import MenuListPage from './pages/MenuListPage.vue'
+import WeeklyMenuPlanningPage from './pages/WeeklyMenuPlanningPage.vue'
 import CreditMovementFormPage from './pages/CreditMovementFormPage.vue'
 import ChargeDetailPage from './pages/ChargeDetailPage.vue'
 import FinancialListPage from './pages/FinancialListPage.vue'
@@ -46,6 +47,8 @@ const props = withDefaults(defineProps<{
 
 const page = computed(() => commercialPages[props.section])
 const menuListKey = ref(0)
+const weeklyPlanDirty = ref(false)
+const menuReturnConfirmationOpen = ref(false)
 const customer = computed(() => getCustomer(props.customerId))
 const pageTitle = computed(() => {
   if (props.section === 'financeiro') {
@@ -61,6 +64,7 @@ const pageTitle = computed(() => {
     return page.value.title
   }
   if (props.section === 'cardapios') {
+    if (props.menuPage === 'planning') return 'Planejamento semanal'
     if (props.menuPage === 'new') return 'Novo cardápio'
     if (props.menuPage === 'edit' && props.menuDate) return `Cardápio de ${formatMenuDate(props.menuDate)}`
     return page.value.title
@@ -83,6 +87,7 @@ const pageSubtitle = computed(() => {
     return page.value.subtitle
   }
   if (props.section === 'cardapios') {
+    if (props.menuPage === 'planning') return 'Organize a intenção da semana e derive cardápios diários para revisão.'
     if (props.menuPage === 'new') return 'Monte as opções e ofertas de um novo dia operacional.'
     if (props.menuPage === 'edit' && props.menuDate) return formatMenuDate(props.menuDate, true)
     return page.value.subtitle
@@ -113,7 +118,21 @@ function menuListReturnUrl() {
 }
 
 function returnToMenus() {
+  if (props.menuPage === 'planning' && weeklyPlanDirty.value) {
+    menuReturnConfirmationOpen.value = true
+    return
+  }
   navigate(menuListReturnUrl())
+}
+
+function confirmReturnToMenus() {
+  weeklyPlanDirty.value = false
+  navigate(menuListReturnUrl())
+}
+
+function planWeek() {
+  const current = `${window.location.pathname}${window.location.search}`
+  navigate(`/cardapios/planejamento?retorno=${encodeURIComponent(current)}`)
 }
 
 function refreshMenuList() {
@@ -155,7 +174,7 @@ const isListPage = computed(() => props.section === 'clientes'
       <button
         v-if="props.section === 'clientes' && props.customerPage !== 'list'"
         type="button"
-        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        class="commercial-page-back cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         @click="returnToCustomers">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
         Voltar para clientes
@@ -164,7 +183,7 @@ const isListPage = computed(() => props.section === 'clientes'
       <button
         v-if="props.section === 'cardapios' && props.menuPage !== 'list'"
         type="button"
-        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        class="commercial-page-back cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         @click="returnToMenus">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
         Voltar para cardápios
@@ -173,7 +192,7 @@ const isListPage = computed(() => props.section === 'clientes'
       <button
         v-if="props.section === 'financeiro' && props.financialPage !== 'list'"
         type="button"
-        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        class="commercial-page-back cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         @click="returnToFinancial">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
         Voltar para financeiro
@@ -182,7 +201,7 @@ const isListPage = computed(() => props.section === 'clientes'
       <button
         v-if="props.section === 'planos' && props.planPage !== 'list'"
         type="button"
-        class="hidden cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:inline-flex"
+        class="commercial-page-back cursor-pointer items-center gap-1 text-sm font-medium text-slate-400 transition-colors hover:text-slate-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         @click="returnToPlans">
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
         Voltar para planos e créditos
@@ -193,9 +212,13 @@ const isListPage = computed(() => props.section === 'clientes'
         Novo cliente
       </Button>
 
-      <MenuSpreadsheetImport
-        v-if="props.section === 'cardapios' && props.menuPage === 'list'"
-        @imported="refreshMenuList" />
+      <div v-if="props.section === 'cardapios' && props.menuPage === 'list'" class="flex flex-wrap gap-2">
+        <Button type="button" variant="secondary" @click="planWeek">
+          <template #icon><CalendarDaysIcon /></template>
+          Planejar semana
+        </Button>
+        <MenuSpreadsheetImport @imported="refreshMenuList" />
+      </div>
 
     </div>
 
@@ -213,6 +236,7 @@ const isListPage = computed(() => props.section === 'clientes'
       </template>
       <template v-else-if="props.section === 'cardapios'">
         <MenuListPage v-if="props.menuPage === 'list'" :key="menuListKey" />
+        <WeeklyMenuPlanningPage v-else-if="props.menuPage === 'planning'" @dirty-change="weeklyPlanDirty = $event" />
         <MenuFormPage v-else :mode="props.menuPage === 'new' ? 'create' : 'edit'" :menu-date="props.menuDate" />
       </template>
       <template v-else-if="props.section === 'planos'">
@@ -227,5 +251,26 @@ const isListPage = computed(() => props.section === 'clientes'
         <PaymentFormPage v-else />
       </template>
     </main>
+
+    <AlertDialog
+      v-model:open="menuReturnConfirmationOpen"
+      title="Sair do planejamento semanal?"
+      description="As alterações que ainda não foram salvas serão perdidas."
+      cancel-label="Continuar editando"
+      confirm-label="Sair sem salvar"
+      confirm-variant="danger"
+      @confirm="confirmReturnToMenus" />
   </div>
 </template>
+
+<style scoped>
+.commercial-page-back {
+  display: none;
+}
+
+@media (min-width: 40rem) {
+  .commercial-page-back {
+    display: inline-flex;
+  }
+}
+</style>

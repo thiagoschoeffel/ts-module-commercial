@@ -36,6 +36,20 @@ export interface DailyMenu {
   updatedAt: string
 }
 
+export interface WeeklyMenuPlanDay {
+  date: string
+  enabled: boolean
+  options: MenuOption[]
+}
+
+export interface WeeklyMenuPlan {
+  weekStart: string
+  days: WeeklyMenuPlanDay[]
+  offerIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CatalogOfferSource {
   id: string
   name: string
