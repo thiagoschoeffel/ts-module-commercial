@@ -173,6 +173,7 @@ function statusVariant(status: ChargeStatus) { return status === 'paid' ? 'succe
 function methodLabel(method: PaymentMethod) { return ({ pix: 'Pix', cash: 'Dinheiro', 'debit-card': 'Cartão de débito', 'credit-card': 'Cartão de crédito', 'bank-transfer': 'Transferência' } as const)[method] }
 function creditTypeLabel(type: FinancialCreditMovement['type']) { return ({ 'payment-surplus': 'Excedente de pagamento', 'administrative-adjustment': 'Ajuste administrativo', refund: 'Estorno', use: 'Utilização' } as const)[type] }
 function chargeHref(id: string) { return `/financeiro/cobrancas/${id}?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}` }
+function openCharge(id: string) { window.location.assign(chargeHref(id)) }
 function filterBadgeVariant(value: string): 'neutral' | 'success' | 'warning' | 'danger' {
   if (value === 'pagas' || value === 'alocados' || value === 'entradas') return 'success'
   if (value === 'vencidas' || value === 'saidas') return 'danger'
@@ -230,7 +231,7 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
       </Tabs>
     </Card>
 
-    <Card class="mt-4 md:min-h-0 md:flex-1 [&>div]:flex [&>div]:min-h-0 [&>div]:flex-col [&>div]:p-4">
+    <Card class="mt-4 md:min-h-[27rem] md:flex-1 [&>div]:flex [&>div]:min-h-0 [&>div]:flex-col [&>div]:p-4">
       <EmptyState v-if="hasError || (!isLoading && pageItems.length === 0)" :bordered="false" size="large" :title="hasError ? 'Não foi possível carregar o financeiro' : 'Nenhum registro encontrado'" :description="hasError ? 'Verifique a conexão e tente novamente.' : hasFilters ? 'Nenhum registro corresponde à busca atual.' : 'Os registros financeiros aparecerão aqui.'" :role="hasError ? 'alert' : 'status'">
         <template #icon><TriangleAlertIcon v-if="hasError" /><SearchIcon v-else-if="hasFilters" /><CircleDollarSignIcon v-else /></template>
         <template #action><Button v-if="hasError" size="small" @click="setLoading">Tentar novamente</Button><Button v-else-if="hasFilters" size="small" variant="secondary" @click="clearFilters">Limpar filtros</Button></template>
@@ -249,11 +250,11 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
           </Card>
         </div>
 
-        <DataTable class="hidden min-h-0 flex-1 md:flex" :columns="columns" :rows="rows" :selectable="false" :loading="isLoading" :sort-key="sortKey" :sort-direction="sortDirection" sort-mode="manual" label="Registros financeiros" @sort="updateSort">
+        <DataTable class="hidden flex-1 md:flex md:min-h-80" :columns="columns" :rows="rows" :selectable="false" :loading="isLoading" :sort-key="sortKey" :sort-direction="sortDirection" sort-mode="manual" label="Registros financeiros" actions-label="Ação" @sort="updateSort">
           <template #cell-dueDate="{ row }">{{ date(asCharge(row).dueDate) }}</template>
           <template #cell-receivedAt="{ row }">{{ date(asPayment(row).receivedAt) }}</template>
           <template #cell-occurredAt="{ row }">{{ dateTime(asCredit(row).occurredAt) }}</template>
-          <template #cell-orderId="{ row }"><a :href="chargeHref(asCharge(row).id)" class="font-medium text-blue-600 hover:text-blue-800">{{ asCharge(row).orderId }}</a></template>
+          <template #cell-orderId="{ row }">{{ asCharge(row).orderId }}</template>
           <template #cell-amount="{ row }"><span :class="activeView === 'creditos' ? (asCredit(row).amount >= 0 ? 'text-emerald-700' : 'text-red-700') : ''">{{ activeView === 'creditos' && asCredit(row).amount >= 0 ? '+' : '' }}{{ currency(Number(row.amount)) }}</span></template>
           <template #cell-balance="{ row }"><strong>{{ currency(asCharge(row).balance) }}</strong></template>
           <template #cell-status="{ row }"><Badge :variant="statusVariant(asCharge(row).status)">{{ statusLabel(asCharge(row).status) }}</Badge></template>
@@ -261,11 +262,13 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
           <template #cell-allocatedAmount="{ row }">{{ currency(asPayment(row).allocatedAmount) }}</template>
           <template #cell-financialCreditGenerated="{ row }"><span :class="asPayment(row).financialCreditGenerated > 0 ? 'text-emerald-700' : 'text-slate-400'">{{ currency(asPayment(row).financialCreditGenerated) }}</span></template>
           <template #cell-type="{ row }">{{ creditTypeLabel(asCredit(row).type) }}</template>
+          <template v-if="activeView === 'cobrancas'" #actions="{ row }"><Button size="small" variant="secondary" @click="openCharge(asCharge(row).id)">Ver<template #trailingIcon><ArrowRightIcon /></template></Button></template>
         </DataTable>
 
         <div v-if="!isLoading && sortedItems.length" class="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between"><p>Exibindo {{ visibleStart }}–{{ visibleEnd }} de {{ sortedItems.length }}</p><Pagination v-model:page="currentPage" :total="sortedItems.length" :items-per-page="itemsPerPage" /></div>
       </template>
     </Card>
+    <div class="h-6 shrink-0" aria-hidden="true" />
   </section>
       </div>
     </template>

@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Alert, Button, Card, InfoIcon, Input, Select, Textarea, TriangleAlertIcon } from '@thiagoschoeffel/ts-components'
+import { computed, ref, shallowRef } from 'vue'
+import { parseDate } from '@internationalized/date'
+import {
+  Alert, Button, Card, Combobox, DatePicker, EmptyState, InfoIcon, Input, SearchIcon,
+  Select, Textarea, TriangleAlertIcon, type ComboboxOption, type DateValue
+} from '@thiagoschoeffel/ts-components'
 import { getCustomerSummaries } from '../mocks/customerStore'
 import { getChargesWithBalance, registerPayment } from '../mocks/financialStore'
 import type { PaymentMethod } from '../types/financial'
 
 const customers = getCustomerSummaries().filter(customer => customer.active)
 const outstandingCharges = getChargesWithBalance().filter(charge => charge.balance > 0 && charge.status !== 'canceled')
-const customerOptions = customers
+const allCustomerOptions: ComboboxOption[] = customers
   .filter(customer => outstandingCharges.some(charge => charge.customerId === customer.id))
-  .map(customer => ({ value: customer.id, label: `${customer.name} · ${customer.phone}` }))
+  .map(customer => ({ value: customer.id, label: customer.name, description: customer.phone }))
 const methodOptions = [
   { value: 'pix', label: 'Pix' }, { value: 'cash', label: 'Dinheiro' },
   { value: 'debit-card', label: 'Cartão de débito' }, { value: 'credit-card', label: 'Cartão de crédito' },
@@ -19,14 +23,23 @@ const today = new Date().toISOString().slice(0, 10)
 const currentResponsible = 'Administrador'
 const requestedCharge = outstandingCharges.find(charge => charge.id === new URLSearchParams(window.location.search).get('cobranca'))
 const customerId = ref(requestedCharge?.customerId ?? '')
+const customerSearch = ref(customers.find(customer => customer.id === customerId.value)?.name ?? '')
 const amount = ref(requestedCharge ? String(requestedCharge.balance.toFixed(2)) : '')
 const receivedAt = ref(today)
+const receivedAtValue = shallowRef<DateValue | undefined>(parseDate(today))
 const method = ref<PaymentMethod>('pix')
 const reference = ref('')
 const allocationValues = ref<Record<string, string>>(requestedCharge ? { [requestedCharge.id]: requestedCharge.balance.toFixed(2) } : {})
 const saving = ref(false)
 const errorMessage = ref('')
 
+const customerOptions = computed(() => {
+  const query = customerSearch.value.trim().toLocaleLowerCase('pt-BR')
+  if (!query) return []
+  const phoneQuery = query.replace(/\D/g, '')
+  return allCustomerOptions.filter(option => option.label.toLocaleLowerCase('pt-BR').includes(query)
+    || Boolean(phoneQuery && option.description?.replace(/\D/g, '').includes(phoneQuery)))
+})
 const selectedCustomer = computed(() => customers.find(customer => customer.id === customerId.value))
 const customerCharges = computed(() => outstandingCharges.filter(charge => charge.customerId === customerId.value))
 const amountNumber = computed(() => Math.max(0, Number(String(amount.value).replace(',', '.')) || 0))
@@ -38,7 +51,27 @@ const canSave = computed(() => Boolean(customerId.value && receivedAt.value && m
 
 function currency(value: number) { return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 function date(value: string) { return new Intl.DateTimeFormat('pt-BR').format(new Date(`${value}T12:00:00`)) }
-function selectCustomer(value: unknown) { customerId.value = String(value ?? ''); allocationValues.value = {}; errorMessage.value = '' }
+function selectCustomer(value?: string) {
+  const nextCustomerId = value ?? ''
+  const customerChanged = customerId.value !== nextCustomerId
+  customerId.value = nextCustomerId
+  customerSearch.value = allCustomerOptions.find(customer => customer.value === value)?.label ?? ''
+  if (customerChanged) allocationValues.value = {}
+  errorMessage.value = ''
+}
+function updateCustomerSearch(value: string) {
+  customerSearch.value = value
+  const selectedName = allCustomerOptions.find(customer => customer.value === customerId.value)?.label
+  if (customerId.value && value !== selectedName) {
+    customerId.value = ''
+    allocationValues.value = {}
+    errorMessage.value = ''
+  }
+}
+function updateReceivedAt(value?: DateValue) {
+  receivedAtValue.value = value
+  receivedAt.value = value?.toString() ?? ''
+}
 function allocateMaximum(chargeId: string, balance: number) {
   const alreadyAllocatedElsewhere = allocations.value.filter(item => item.chargeId !== chargeId).reduce((total, item) => total + item.amount, 0)
   allocationValues.value[chargeId] = String(Math.min(balance, Math.max(0, amountNumber.value - alreadyAllocatedElsewhere)).toFixed(2))
@@ -78,12 +111,12 @@ function submit() {
         <Card>
           <template #header><div><h2 class="font-semibold text-slate-900">Recebimento</h2><p class="mt-1 text-sm text-slate-500">Registre o valor efetivamente recebido antes de distribuí-lo.</p></div></template>
           <div class="grid gap-4 sm:grid-cols-2">
-            <Select :model-value="customerId || undefined" label="Cliente" placeholder="Selecione um cliente com cobranças" :options="customerOptions" required @update:model-value="selectCustomer" />
+            <Combobox :model-value="customerId || undefined" :search-value="customerSearch" label="Cliente" placeholder="Buscar cliente por nome ou telefone..." :options="customerOptions" required external-filter @update:model-value="selectCustomer" @update:search-value="updateCustomerSearch"><template #leading><SearchIcon /></template><template #empty><EmptyState :bordered="false" size="small" :title="customerSearch.trim() ? 'Nenhum cliente com cobranças encontrado' : 'Busque um cliente'" :description="customerSearch.trim() ? 'Revise o nome ou telefone informado.' : 'Digite o nome ou telefone para encontrar um cliente com cobranças em aberto.'"><template #icon><SearchIcon /></template></EmptyState></template></Combobox>
             <Input v-model="amount" type="number" inputmode="decimal" min="0.01" step="0.01" label="Valor recebido" required><template #leading>R$</template></Input>
-            <Input v-model="receivedAt" type="date" label="Data do pagamento" required />
+            <DatePicker :model-value="receivedAtValue" label="Data do pagamento" required @update:model-value="updateReceivedAt" />
             <Select v-model="method" label="Forma de pagamento" :options="methodOptions" required @update:model-value="method = $event as PaymentMethod" />
           </div>
-          <Textarea v-model="reference" class="mt-4" label="Referência ou observação" placeholder="Ex.: comprovante enviado pelo WhatsApp" :rows="3" />
+          <Textarea v-model="reference" class="mt-4" label="Referência ou observação" placeholder="Ex.: comprovante enviado pelo WhatsApp" :rows="3" rich-text />
           <Input :model-value="currentResponsible" class="mt-4 sm:max-w-sm" label="Responsável" description="Identificado automaticamente pelo usuário atual." readonly />
         </Card>
 
@@ -96,7 +129,7 @@ function submit() {
               <div class="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto]">
                 <div><p class="font-medium text-slate-800">{{ charge.description }}</p><p class="mt-1 text-xs text-slate-500">{{ charge.id }} · {{ charge.orderId }} · vence {{ date(charge.dueDate) }}</p><p class="mt-2 text-sm text-slate-600">Saldo: <strong>{{ currency(charge.balance) }}</strong></p></div>
                 <Input v-model="allocationValues[charge.id]" type="number" inputmode="decimal" min="0" :max="charge.balance" step="0.01" label="Valor alocado"><template #leading>R$</template></Input>
-                <Button type="button" size="small" variant="secondary" :disabled="amountNumber <= 0" @click="allocateMaximum(charge.id, charge.balance)">Máximo</Button>
+                <Button type="button" size="medium" variant="secondary" :disabled="amountNumber <= 0" @click="allocateMaximum(charge.id, charge.balance)">Máximo</Button>
               </div>
             </Card>
           </div>
