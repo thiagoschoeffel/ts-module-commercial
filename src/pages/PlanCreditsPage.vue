@@ -7,6 +7,7 @@ import {
 } from '@thiagoschoeffel/ts-components'
 import { getAcquisitionsWithBalance, getCreditMovements, getPlans } from '../mocks/planStore'
 import type { AcquisitionWithBalance, CommercialPlan, CreditMovement, CreditMovementType } from '../types/plan'
+import { navigate } from '../utils/navigation'
 
 type PlanCreditsView = 'planos' | 'aquisicoes' | 'extrato'
 type MockScenario = 'padrao' | 'sem-planos' | 'sem-resultados' | 'erro'
@@ -93,7 +94,7 @@ const sectionContent: Record<PlanCreditsView, { title: string; subtitle: string;
   extrato: {
     title: 'Extrato',
     subtitle: 'Acompanhe aquisições, consumos, estornos e ajustes de créditos.',
-    action: 'Movimentar créditos'
+    action: 'Estornar consumo'
   }
 }
 const activeContent = computed(() => sectionContent[activeView.value])
@@ -286,13 +287,13 @@ function richTextPlainText(value?: string) { return richTextHtml(value).replace(
 function asPlan(row: DataTableRow) { return row as unknown as CommercialPlan }
 function asAcquisition(row: DataTableRow) { return row as unknown as AcquisitionWithBalance }
 function asMovement(row: DataTableRow) { return row as unknown as CreditMovement }
-function editPlan(id: string) { window.location.assign(`/planos/${id}/editar?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
-function refundMovement(id: string) { window.location.assign(`/planos/movimentacoes/nova?tipo=estorno&movimento=${encodeURIComponent(id)}&retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+function editPlan(id: string) { navigate(`/planos/${id}/editar?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+function refundMovement(id: string) { navigate(`/planos/movimentacoes/nova?movimento=${encodeURIComponent(id)}&retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
 function createCurrent() {
   const returnUrl = encodeURIComponent(`${window.location.pathname}${window.location.search}`)
-  if (activeView.value === 'planos') window.location.assign(`/planos/novo?retorno=${returnUrl}`)
-  else if (activeView.value === 'aquisicoes') window.location.assign(`/planos/aquisicoes/nova?retorno=${returnUrl}`)
-  else window.location.assign(`/planos/movimentacoes/nova?retorno=${returnUrl}`)
+  if (activeView.value === 'planos') navigate(`/planos/novo?retorno=${returnUrl}`)
+  else if (activeView.value === 'aquisicoes') navigate(`/planos/aquisicoes/nova?retorno=${returnUrl}`)
+  else navigate(`/planos/movimentacoes/nova?retorno=${returnUrl}`)
 }
 function clearFilters() {
   search.value = ''

@@ -20,6 +20,7 @@ import PlanAcquisitionFormPage from './pages/PlanAcquisitionFormPage.vue'
 import PlanCreditsPage from './pages/PlanCreditsPage.vue'
 import PlanFormPage from './pages/PlanFormPage.vue'
 import type { CommercialSection, CustomerPage, FinancialPage, MenuPage, PlanPage } from './types/commercial'
+import { navigate } from './utils/navigation'
 
 const props = withDefaults(defineProps<{
   section?: CommercialSection
@@ -56,7 +57,7 @@ const pageTitle = computed(() => {
     if (props.planPage === 'new') return 'Novo plano'
     if (props.planPage === 'edit') return 'Editar plano'
     if (props.planPage === 'new-acquisition') return 'Nova aquisição'
-    if (props.planPage === 'new-movement') return 'Nova movimentação'
+    if (props.planPage === 'new-movement') return 'Estornar consumo'
     return page.value.title
   }
   if (props.section === 'cardapios') {
@@ -78,7 +79,7 @@ const pageSubtitle = computed(() => {
   if (props.section === 'planos') {
     if (props.planPage === 'new' || props.planPage === 'edit') return 'Defina o benefício coberto e as condições padrão.'
     if (props.planPage === 'new-acquisition') return 'Registre a compra preservando as condições contratadas.'
-    if (props.planPage === 'new-movement') return 'Consuma ou estorne créditos com origem rastreável.'
+    if (props.planPage === 'new-movement') return 'Devolva o crédito à aquisição original com origem rastreável.'
     return page.value.subtitle
   }
   if (props.section === 'cardapios') {
@@ -99,11 +100,11 @@ function listReturnUrl() {
 
 function createCustomer() {
   const current = `${window.location.pathname}${window.location.search}`
-  window.location.assign(`/clientes/novo?retorno=${encodeURIComponent(current)}`)
+  navigate(`/clientes/novo?retorno=${encodeURIComponent(current)}`)
 }
 
 function returnToCustomers() {
-  window.location.assign(listReturnUrl())
+  navigate(listReturnUrl())
 }
 
 function menuListReturnUrl() {
@@ -112,7 +113,7 @@ function menuListReturnUrl() {
 }
 
 function returnToMenus() {
-  window.location.assign(menuListReturnUrl())
+  navigate(menuListReturnUrl())
 }
 
 function refreshMenuList() {
@@ -124,13 +125,13 @@ function planListReturnUrl() {
   return candidate && /^\/planos(?:\?.*)?$/.test(candidate) ? candidate : '/planos'
 }
 
-function returnToPlans() { window.location.assign(planListReturnUrl()) }
+function returnToPlans() { navigate(planListReturnUrl()) }
 
 function financialListReturnUrl() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
   return candidate && /^\/financeiro(?:\?.*)?$/.test(candidate) ? candidate : '/financeiro'
 }
-function returnToFinancial() { window.location.assign(financialListReturnUrl()) }
+function returnToFinancial() { navigate(financialListReturnUrl()) }
 
 const isListPage = computed(() => props.section === 'clientes'
   ? props.customerPage === 'list'

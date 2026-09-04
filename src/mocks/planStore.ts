@@ -79,7 +79,8 @@ function saveMovements(movements: CreditMovement[]) {
   localStorage.setItem(movementStorageKey, JSON.stringify([...structuredClone(movements), ...saved]))
 }
 
-export function consumeCredits(input: { customerId: string; planId: string; offerId: string; offerName: string; quantity: number; orderId: string; responsible: string }) {
+/** Efeito interno da confirmação de pedido; não deve ser exposto como ação administrativa avulsa. */
+export function applyConfirmedOrderCreditConsumption(input: { customerId: string; planId: string; offerId: string; offerName: string; quantity: number; orderId: string; responsible: string }) {
   const eligible = getAcquisitionsWithBalance()
     .filter(item => item.customerId === input.customerId && item.planId === input.planId && item.balance > 0
       && !item.expired && item.benefitSnapshot.compatibleOfferIds.includes(input.offerId))
