@@ -7,6 +7,7 @@ import {
 } from '@thiagoschoeffel/ts-components'
 import { financialCreditBalance, getChargesWithBalance, getFinancialCreditMovements, getPaymentsWithAllocation } from '../mocks/financialStore'
 import type { ChargeStatus, ChargeWithBalance, FinancialCreditMovement, PaymentMethod, PaymentWithAllocation } from '../types/financial'
+import { navigate } from '../utils/navigation'
 
 type FinancialView = 'cobrancas' | 'pagamentos' | 'creditos'
 type MockScenario = 'padrao' | 'sem-financeiro' | 'sem-resultados' | 'erro'
@@ -173,14 +174,14 @@ function statusVariant(status: ChargeStatus) { return status === 'paid' ? 'succe
 function methodLabel(method: PaymentMethod) { return ({ pix: 'Pix', cash: 'Dinheiro', 'debit-card': 'Cartão de débito', 'credit-card': 'Cartão de crédito', 'bank-transfer': 'Transferência' } as const)[method] }
 function creditTypeLabel(type: FinancialCreditMovement['type']) { return ({ 'payment-surplus': 'Excedente de pagamento', 'administrative-adjustment': 'Ajuste administrativo', refund: 'Estorno', use: 'Utilização' } as const)[type] }
 function chargeHref(id: string) { return `/financeiro/cobrancas/${id}?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}` }
-function openCharge(id: string) { window.location.assign(chargeHref(id)) }
+function openCharge(id: string) { navigate(chargeHref(id)) }
 function filterBadgeVariant(value: string): 'neutral' | 'success' | 'warning' | 'danger' {
   if (value === 'pagas' || value === 'alocados' || value === 'entradas') return 'success'
   if (value === 'vencidas' || value === 'saidas') return 'danger'
   if (value === 'em-aberto' || value === 'com-excedente') return 'warning'
   return 'neutral'
 }
-function createPayment() { window.location.assign(`/financeiro/pagamentos/novo?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+function createPayment() { navigate(`/financeiro/pagamentos/novo?retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
 function clearFilters() { search.value = ''; activeFilter.value = 'todos' }
 
 onMounted(setLoading)

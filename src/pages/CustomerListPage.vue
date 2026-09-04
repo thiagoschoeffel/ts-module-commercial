@@ -7,6 +7,7 @@ import {
 } from '@thiagoschoeffel/ts-components'
 import { getCustomerSummaries } from '../mocks/customerStore'
 import type { CustomerSummary } from '../types/customer'
+import { navigate } from '../utils/navigation'
 
 type CustomerSortKey = 'name' | 'phone' | 'addressSummary' | 'preferencesCount' | 'dietaryRestrictions'
 type CustomerListMockScenario = 'padrao' | 'sem-clientes' | 'sem-resultados' | 'erro'
@@ -175,8 +176,8 @@ const emptyStateDescription = computed(() => {
 function asCustomer(row: DataTableRow) { return row as unknown as CustomerSummary }
 function listReturnUrl() { return `${window.location.pathname}${window.location.search}` }
 function customerHref(id: string) { return `/clientes/${id}?retorno=${encodeURIComponent(listReturnUrl())}` }
-function openCustomer(id: string) { window.location.assign(customerHref(id)) }
-function createCustomer() { window.location.assign(`/clientes/novo?retorno=${encodeURIComponent(listReturnUrl())}`) }
+function openCustomer(id: string) { navigate(customerHref(id)) }
+function createCustomer() { navigate(`/clientes/novo?retorno=${encodeURIComponent(listReturnUrl())}`) }
 function additionalAddressCount(customer: CustomerSummary) { return Math.max(0, customer.addresses.length - 1) }
 function clearFilters() { search.value = ''; debouncedSearch.value = ''; activeTab.value = 'todos' }
 function updateSort(state: { key?: string; direction?: DataTableSortDirection }) {

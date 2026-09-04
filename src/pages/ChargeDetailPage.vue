@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Alert, Badge, Button, Card, CircleDollarSignIcon, EmptyState, InfoIcon } from '@thiagoschoeffel/ts-components'
 import { getCharge, getPaymentAllocations, getPayments } from '../mocks/financialStore'
 import type { ChargeStatus, PaymentMethod } from '../types/financial'
+import { navigate } from '../utils/navigation'
 
 const props = defineProps<{ chargeId?: string }>()
 const charge = computed(() => getCharge(props.chargeId))
@@ -17,7 +18,7 @@ function dateTime(value: string) { return new Intl.DateTimeFormat('pt-BR', { dat
 function statusLabel(status: ChargeStatus) { return ({ pending: 'Pendente', partial: 'Parcialmente paga', paid: 'Paga', overdue: 'Vencida', canceled: 'Cancelada' } as const)[status] }
 function statusVariant(status: ChargeStatus) { return status === 'paid' ? 'success' : status === 'overdue' || status === 'canceled' ? 'danger' : status === 'partial' ? 'warning' : 'neutral' }
 function methodLabel(method: PaymentMethod) { return ({ pix: 'Pix', cash: 'Dinheiro', 'debit-card': 'Cartão de débito', 'credit-card': 'Cartão de crédito', 'bank-transfer': 'Transferência' } as const)[method] }
-function newPayment() { window.location.assign(`/financeiro/pagamentos/novo?cobranca=${encodeURIComponent(charge.value?.id ?? '')}&retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
+function newPayment() { navigate(`/financeiro/pagamentos/novo?cobranca=${encodeURIComponent(charge.value?.id ?? '')}&retorno=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`) }
 </script>
 
 <template>

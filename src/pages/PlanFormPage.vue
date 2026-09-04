@@ -6,6 +6,7 @@ import {
 } from '@thiagoschoeffel/ts-components'
 import { getCatalogOfferSources } from '../mocks/menuCatalogSource'
 import { getPlan, nextPlanId, savePlan } from '../mocks/planStore'
+import { navigate } from '../utils/navigation'
 
 const props = withDefaults(defineProps<{ mode?: 'create' | 'edit'; planId?: string }>(), { mode: 'create', planId: undefined })
 const source = computed(() => getPlan(props.planId))
@@ -38,7 +39,7 @@ function returnUrl() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
   return candidate && /^\/planos(?:\?.*)?$/.test(candidate) ? candidate : '/planos'
 }
-function cancel() { window.location.assign(returnUrl()) }
+function cancel() { navigate(returnUrl()) }
 function save() {
   showValidation.value = true
   if (nameError.value || benefitError.value || offersError.value || creditsError.value || priceError.value || validityError.value || (props.mode === 'edit' && !source.value)) return

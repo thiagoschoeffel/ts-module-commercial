@@ -10,6 +10,7 @@ import {
   createDailyMenu, formatMenuDate, getDailyMenu, localDateIso, menuAvailabilityOptions, saveDailyMenu
 } from '../mocks/menuStore'
 import type { DailyMenu, MenuAvailability, MenuOffer, MenuOption } from '../types/menu'
+import { navigate } from '../utils/navigation'
 
 const props = withDefaults(defineProps<{ mode?: 'create' | 'edit'; menuDate?: string }>(), { mode: 'create', menuDate: undefined })
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
@@ -147,8 +148,7 @@ function persist(publish: boolean) {
     : 'Alterações do cardápio salvas.'
   saving.value = false
   if (props.mode === 'create') {
-    window.history.replaceState(window.history.state, '', `/cardapios/${menu.date}`)
-    navigationTimer = setTimeout(() => window.location.assign(`/cardapios/${menu.date}`), 800)
+    navigationTimer = setTimeout(() => navigate(`/cardapios/${menu.date}`, true), 800)
   }
 }
 function availabilityLabel(value: MenuAvailability) {

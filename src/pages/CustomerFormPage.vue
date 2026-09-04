@@ -7,6 +7,7 @@ import {
 import { getCustomer, nextCustomerId, saveCustomer } from '../mocks/customerStore'
 import { findDeliveryDriverByName, getDeliveryDrivers } from '../mocks/deliveryDriverSource'
 import type { CustomerAddress, CustomerDetail, CustomerPreference } from '../types/customer'
+import { navigate } from '../utils/navigation'
 
 const props = withDefaults(defineProps<{ mode?: 'create' | 'edit'; customerId?: string }>(), {
   mode: 'create', customerId: undefined
@@ -168,7 +169,7 @@ function returnUrl() {
 }
 function detailUrl(id: string) { return `/clientes/${id}?retorno=${encodeURIComponent(returnUrl())}` }
 function leavePage() {
-  window.location.assign(props.mode === 'edit' && props.customerId ? detailUrl(props.customerId) : returnUrl())
+  navigate(props.mode === 'edit' && props.customerId ? detailUrl(props.customerId) : returnUrl())
 }
 function cancel() { if (isDirty.value) cancelConfirmationOpen.value = true; else leavePage() }
 function save() {
@@ -194,7 +195,7 @@ function save() {
     saving.value = false
     initialSnapshot.value = snapshot.value
     savedMessage.value = props.mode === 'edit' ? 'Alterações do cliente salvas.' : 'Cliente criado com sucesso.'
-    navigationTimeout = setTimeout(() => window.location.assign(detailUrl(id)), 700)
+    navigationTimeout = setTimeout(() => navigate(detailUrl(id)), 700)
   }, 450)
 }
 function warnBeforeUnload(event: BeforeUnloadEvent) {

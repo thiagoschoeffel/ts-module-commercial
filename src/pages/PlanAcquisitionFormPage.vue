@@ -9,6 +9,7 @@ import {
 import { getCustomers } from '../mocks/customerStore'
 import { localDateIso } from '../mocks/menuStore'
 import { getPlans, nextAcquisitionId, saveAcquisition } from '../mocks/planStore'
+import { navigate } from '../utils/navigation'
 
 const customers = getCustomers().filter(customer => customer.active)
 const plans = getPlans().filter(plan => plan.active)
@@ -76,7 +77,7 @@ function returnUrl() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
   return candidate && /^\/planos(?:\?.*)?$/.test(candidate) ? candidate : '/planos?tab=aquisicoes'
 }
-function cancel() { window.location.assign(returnUrl()) }
+function cancel() { navigate(returnUrl()) }
 function save() {
   showValidation.value = true
   if (customerError.value || planError.value || quantityError.value || amountError.value || expirationError.value || !purchasedAt.value || !selectedCustomer.value || !selectedPlan.value) return

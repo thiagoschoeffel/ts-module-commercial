@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Alert, Badge, Button, Card, ChevronLeftIcon, EmptyState, InfoIcon, sanitizeRichText, TriangleAlertIcon, UsersIcon } from '@thiagoschoeffel/ts-components'
 import { formatFullAddress, getCustomer } from '../mocks/customerStore'
 import { findDeliveryDriver } from '../mocks/deliveryDriverSource'
+import { navigate } from '../utils/navigation'
 
 const props = defineProps<{ customerId?: string }>()
 const loading = ref(true)
@@ -20,7 +21,7 @@ const preferredDeliveryDriverName = computed(() => {
 
 function load() { failed.value = false; loading.value = true; if (loadingTimeout) clearTimeout(loadingTimeout); loadingTimeout = setTimeout(() => loading.value = false, 300) }
 function returnUrl() { const candidate = new URLSearchParams(window.location.search).get('retorno'); return candidate && /^\/clientes(?:\?.*)?$/.test(candidate) ? candidate : '/clientes' }
-function edit() { if (customer.value) window.location.assign(`/clientes/${customer.value.id}/editar?retorno=${encodeURIComponent(returnUrl())}`) }
+function edit() { if (customer.value) navigate(`/clientes/${customer.value.id}/editar?retorno=${encodeURIComponent(returnUrl())}`) }
 onMounted(load)
 onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
 </script>

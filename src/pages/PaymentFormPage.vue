@@ -9,6 +9,7 @@ import { getCustomerSummaries } from '../mocks/customerStore'
 import { getChargesWithBalance, registerPayment } from '../mocks/financialStore'
 import { localDateIso } from '../mocks/menuStore'
 import type { PaymentMethod } from '../types/financial'
+import { navigate } from '../utils/navigation'
 
 const customers = getCustomerSummaries().filter(customer => customer.active)
 const outstandingCharges = getChargesWithBalance().filter(charge => charge.balance > 0 && charge.status !== 'canceled')
@@ -89,7 +90,7 @@ function allocateOldestFirst() {
 }
 function cancel() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
-  window.location.assign(candidate && /^\/financeiro(?:\/cobrancas\/[A-Za-z0-9-]+)?(?:\?.*)?$/.test(candidate) ? candidate : '/financeiro')
+  navigate(candidate && /^\/financeiro(?:\/cobrancas\/[A-Za-z0-9-]+)?(?:\?.*)?$/.test(candidate) ? candidate : '/financeiro')
 }
 function submit() {
   errorMessage.value = ''
@@ -98,7 +99,7 @@ function submit() {
   try {
     registerPayment({ customerId: customerId.value, customerNameSnapshot: selectedCustomer.value.name, amount: amountNumber.value, receivedAt: receivedAt.value, method: method.value, reference: reference.value, responsibleSnapshot: currentResponsible, allocations: allocations.value })
     const returnUrl = new URLSearchParams(window.location.search).get('retorno')
-    window.location.assign(returnUrl && /^\/financeiro\/cobrancas\/[A-Za-z0-9-]+(?:\?.*)?$/.test(returnUrl) ? returnUrl : '/financeiro?tab=pagamentos')
+    navigate(returnUrl && /^\/financeiro\/cobrancas\/[A-Za-z0-9-]+(?:\?.*)?$/.test(returnUrl) ? returnUrl : '/financeiro?tab=pagamentos')
   }
   catch (error) { errorMessage.value = error instanceof Error ? error.message : 'Não foi possível registrar o pagamento.'; saving.value = false }
 }
