@@ -269,7 +269,7 @@ onBeforeUnmount(() => {
 
       <DataTable
       :class="[
-        'hidden min-h-0 flex-1 md:flex',
+        'desktop-only-flex min-h-0 flex-1',
         !isLoading && (hasLoadingError || visibleCustomers.length === 0)
           ? '[&_table]:h-full [&_tbody>tr>td]:align-middle'
           : ''

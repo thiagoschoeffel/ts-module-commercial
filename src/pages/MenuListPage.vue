@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 sm:px-5">
           <span class="flex items-center gap-2"><span class="size-2 rounded-full bg-emerald-500" />Publicado</span>
           <span class="flex items-center gap-2"><span class="size-2 rounded-full bg-slate-400" />Rascunho</span>
-          <span class="ml-auto hidden items-center gap-2 sm:flex"><BookOpenIcon class="size-4" />Selecione um dia para abrir ou criar o cardápio</span>
+          <span class="small-screen-up-flex ml-auto items-center gap-2"><BookOpenIcon class="size-4" />Selecione um dia para abrir ou criar o cardápio</span>
         </div>
       </div>
     </Card>

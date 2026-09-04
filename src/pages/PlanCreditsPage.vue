@@ -388,7 +388,7 @@ onBeforeUnmount(() => {
         </template>
       </div>
 
-      <DataTable :key="activeView" class="hidden min-h-0 flex-1 md:flex" :columns="currentColumns" :rows="hasError ? [] : rows" :selectable="false" :loading="isLoading" :loading-rows="6" row-key="id" :label="`Registros da seção ${activeView}`" actions-label="Ação" sort-mode="manual" :sort-key="activeSortKey" :sort-direction="activeSortDirection" @sort="updateSort">
+      <DataTable :key="activeView" class="desktop-only-flex min-h-0 flex-1" :columns="currentColumns" :rows="hasError ? [] : rows" :selectable="false" :loading="isLoading" :loading-rows="6" row-key="id" :label="`Registros da seção ${activeView}`" actions-label="Ação" sort-mode="manual" :sort-key="activeSortKey" :sort-direction="activeSortDirection" @sort="updateSort">
         <template #cell-name="{ row }"><div class="max-w-60 whitespace-normal"><p class="font-medium text-slate-800">{{ asPlan(row).name }}</p><p class="mt-1 text-xs text-slate-500">{{ asPlan(row).id }}</p><div v-if="asPlan(row).description" class="mt-1 line-clamp-2 break-words text-xs text-slate-500 [&_a]:underline [&_em]:italic [&_s]:line-through [&_strong]:font-semibold [&_u]:underline" v-html="richTextHtml(asPlan(row).description)" /></div></template>
         <template #cell-benefit="{ row }"><p class="text-slate-700">{{ asPlan(row).benefit.description }}</p><p class="mt-1 text-xs text-slate-500">{{ asPlan(row).benefit.compatibleOfferNames.join(', ') }}</p></template>
         <template #cell-defaultCredits="{ row }"><Badge variant="neutral">{{ asPlan(row).defaultCredits }}</Badge></template>

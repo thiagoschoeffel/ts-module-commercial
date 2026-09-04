@@ -250,7 +250,7 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
           </Card>
         </div>
 
-        <DataTable class="hidden flex-1 md:flex md:min-h-80" :columns="columns" :rows="rows" :selectable="false" :loading="isLoading" :sort-key="sortKey" :sort-direction="sortDirection" sort-mode="manual" label="Registros financeiros" actions-label="Ação" @sort="updateSort">
+        <DataTable class="desktop-only-flex flex-1 md:min-h-80" :columns="columns" :rows="rows" :selectable="false" :loading="isLoading" :sort-key="sortKey" :sort-direction="sortDirection" sort-mode="manual" label="Registros financeiros" actions-label="Ação" @sort="updateSort">
           <template #cell-dueDate="{ row }">{{ date(asCharge(row).dueDate) }}</template>
           <template #cell-receivedAt="{ row }">{{ date(asPayment(row).receivedAt) }}</template>
           <template #cell-occurredAt="{ row }">{{ dateTime(asCredit(row).occurredAt) }}</template>
