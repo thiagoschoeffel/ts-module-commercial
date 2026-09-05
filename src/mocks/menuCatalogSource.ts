@@ -47,6 +47,13 @@ const baselineProducibles: ProducibleSource[] = [
   { id: 'prod-1006', name: 'Legumes assados' }
 ]
 
+let authoritativeOffers: CatalogOfferSource[] | undefined
+let authoritativeProducibles: ProducibleSource[] | undefined
+export function setAuthoritativeMenuSources(offers?: CatalogOfferSource[], producibles?: ProducibleSource[]) {
+  authoritativeOffers = offers ? structuredClone(offers) : undefined
+  authoritativeProducibles = producibles ? structuredClone(producibles) : undefined
+}
+
 function readArray(key: string): unknown[] {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '[]')
@@ -67,6 +74,7 @@ function mergeById<T extends { id: string }>(saved: T[], baseline: T[]) {
 }
 
 export function getProducibleSources(): ProducibleSource[] {
+  if (authoritativeProducibles) return structuredClone(authoritativeProducibles)
   const saved = readArray('ts-management-producibles-v1')
     .filter(isNamedRecord)
     .map(item => ({ id: item.id, name: item.name }))
@@ -74,6 +82,7 @@ export function getProducibleSources(): ProducibleSource[] {
 }
 
 export function getCatalogOfferSources(): CatalogOfferSource[] {
+  if (authoritativeOffers) return structuredClone(authoritativeOffers)
   const types = mergeById(readArray('ts-management-catalog-component-types-v1').filter(isNamedRecord), baselineTypes)
   const typeNames = new Map(types.map(item => [item.id, item.name]))
   const savedAddons = readArray('ts-management-catalog-addons-v1').filter((item): item is StoredAddon =>

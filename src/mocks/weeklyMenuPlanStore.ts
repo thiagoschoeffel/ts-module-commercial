@@ -1,5 +1,5 @@
 import { getCatalogOfferSources, getProducibleSources } from './menuCatalogSource'
-import { getDailyMenus, localDateIso, saveDailyMenu } from './menuStore'
+import { configuredMenuRequest, configureMenuApi, getDailyMenus, localDateIso, saveDailyMenu } from './menuStore'
 import type { DailyMenu, MenuOffer, MenuOption, WeeklyMenuPlan, WeeklyMenuPlanDay } from '../types/menu'
 
 export const WEEKLY_MENU_PLAN_STORAGE_KEY = 'ts-commercial-weekly-menu-plans-v1'
@@ -104,7 +104,37 @@ export function getWeeklyMenuPlan(start: string) {
   return structuredClone(existing ?? createWeeklyMenuPlan(weekStart))
 }
 
-export function saveWeeklyMenuPlan(plan: WeeklyMenuPlan) {
+export async function loadWeeklyMenuPlan(start: string) {
+  const fallback = getWeeklyMenuPlan(start)
+  const request = configuredMenuRequest()
+  if (!request) return fallback
+  const response = await request(`/api/menu-plans/${fallback.weekStart}`)
+  if (response.status === 404) return fallback
+  if (!response.ok) { const problem = await response.json().catch(() => ({})) as { detail?: string; title?: string }; throw new Error(problem.detail ?? problem.title ?? 'Não foi possível carregar o planejamento.') }
+  const value = await response.json() as { weekStart: string; createdAt: string; updatedAt: string; days: Array<{ date: string; options: Array<{ category: string; producibleItemId: string; availability: 'Available' | 'SoldOut' | 'Suspended' }>; offers: Array<{ offerId: string }> }> }
+  const producibleNames = new Map(getProducibleSources().map(item => [item.id, item.name]))
+  const availability = { Available: 'available', SoldOut: 'sold-out', Suspended: 'suspended' } as const
+  const daysByDate = new Map(value.days.map(day => [day.date, day]))
+  return { ...fallback, createdAt: value.createdAt, updatedAt: value.updatedAt,
+    offerIds: [...new Set(value.days.flatMap(day => day.offers.map(offer => offer.offerId)))],
+    days: fallback.days.map(day => { const saved = daysByDate.get(day.date); return saved ? { ...day, enabled: true,
+      options: saved.options.map((option, index) => ({ id: `${option.category}-${index}`, category: option.category,
+        producibleId: option.producibleItemId, producibleName: producibleNames.get(option.producibleItemId) ?? 'Item indisponível', availability: availability[option.availability] })) } : day }) }
+}
+
+export async function saveWeeklyMenuPlan(plan: WeeklyMenuPlan, deriveDrafts = false) {
+  const request = configuredMenuRequest()
+  if (request) {
+    const response = await request(`/api/menu-plans/${plan.weekStart}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deriveDrafts, days: plan.days.filter(day => day.enabled).map(day => ({ date: day.date, menu: {
+        options: day.options.map(option => ({ category: option.category, producibleItemId: option.producibleId,
+          availability: ({ available: 'Available', 'sold-out': 'SoldOut', suspended: 'Suspended' } as const)[option.availability] })),
+        offers: menuOffers(plan.offerIds).map(offer => ({ offerId: offer.offerId, effectivePrice: offer.effectivePrice,
+          availability: 'Available', displayOrder: offer.order })) } })) }) })
+    if (!response.ok) { const problem = await response.json().catch(() => ({})) as { detail?: string; title?: string }; throw new Error(problem.detail ?? problem.title ?? 'Não foi possível salvar o planejamento.') }
+    await configureMenuApi(request)
+    return { ...plan, updatedAt: new Date().toISOString() }
+  }
   const plans = readPlans()
   const existing = plans.find(item => item.weekStart === plan.weekStart)
   const saved = plans.filter(item => item.weekStart !== plan.weekStart)
@@ -136,7 +166,14 @@ function menuOffers(offerIds: string[]): MenuOffer[] {
   })
 }
 
-export function deriveDailyMenusFromWeeklyPlan(plan: WeeklyMenuPlan) {
+export async function deriveDailyMenusFromWeeklyPlan(plan: WeeklyMenuPlan) {
+  if (configuredMenuRequest()) {
+    const before = new Set(getDailyMenus().map(menu => menu.date))
+    await saveWeeklyMenuPlan(plan, true)
+    const selectedDates = plan.days.filter(item => item.enabled && item.date >= localDateIso()).map(item => item.date)
+    const after = getDailyMenus()
+    return { created: after.filter(menu => selectedDates.includes(menu.date) && !before.has(menu.date)), skippedDates: selectedDates.filter(date => before.has(date)) }
+  }
   const existingDates = new Set(getDailyMenus().map(menu => menu.date))
   const created: DailyMenu[] = []
   const skippedDates: string[] = []
@@ -153,7 +190,7 @@ export function deriveDailyMenusFromWeeklyPlan(plan: WeeklyMenuPlan) {
       offers: menuOffers(plan.offerIds),
       updatedAt: new Date().toISOString()
     }
-    created.push(saveDailyMenu(menu))
+    created.push(await saveDailyMenu(menu))
     existingDates.add(day.date)
   }
 

@@ -1,5 +1,6 @@
 export type DailyMenuStatus = 'draft' | 'published'
 export type MenuAvailability = 'available' | 'sold-out' | 'suspended'
+export type AuthenticatedApiRequest = (path: string, init?: RequestInit) => Promise<Response>
 
 export interface MenuOption {
   id: string
@@ -34,6 +35,7 @@ export interface DailyMenu {
   offers: MenuOffer[]
   publishedAt?: string
   updatedAt: string
+  version?: number
 }
 
 export interface WeeklyMenuPlanDay {

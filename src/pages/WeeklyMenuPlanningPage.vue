@@ -24,6 +24,7 @@ import { formatMenuDate, getDailyMenus, localDateIso } from '../mocks/menuStore'
 import {
   deriveDailyMenusFromWeeklyPlan,
   getWeeklyMenuPlan,
+  loadWeeklyMenuPlan,
   isValidMenuDate,
   moveWeek,
   saveWeeklyMenuPlan,
@@ -45,7 +46,7 @@ const cellSearches = ref<Record<string, string>>({})
 const dailyMenus = ref(getDailyMenus())
 const savedSnapshot = ref(JSON.stringify(plan.value))
 const feedback = ref('')
-const feedbackVariant = ref<'success' | 'warning'>('success')
+const feedbackVariant = ref<'success' | 'warning' | 'danger'>('success')
 const showValidation = ref(false)
 const saving = ref(false)
 const deriving = ref(false)
@@ -175,8 +176,8 @@ function updateUrl() {
   window.history.replaceState(window.history.state, '', url)
 }
 
-function applyWeek(weekStart: string) {
-  plan.value = getWeeklyMenuPlan(weekStart)
+async function applyWeek(weekStart: string) {
+  plan.value = await loadWeeklyMenuPlan(weekStart)
   initializeCellSearches()
   savedSnapshot.value = JSON.stringify(plan.value)
   feedback.value = ''
@@ -188,29 +189,32 @@ function applyWeek(weekStart: string) {
 function requestWeek(offset: number) {
   const target = moveWeek(plan.value.weekStart, offset)
   if (!dirty.value) {
-    applyWeek(target)
+    void applyWeek(target)
     return
   }
   pendingWeek.value = target
   discardConfirmationOpen.value = true
 }
 
-function savePlan() {
+async function savePlan() {
   showValidation.value = true
   if (hasErrors.value) return false
   saving.value = true
-  plan.value = saveWeeklyMenuPlan(plan.value)
-  savedSnapshot.value = JSON.stringify(plan.value)
-  feedbackVariant.value = 'success'
-  feedback.value = 'Planejamento semanal salvo como intenção de cardápio.'
-  saving.value = false
-  return true
+  try {
+    plan.value = await saveWeeklyMenuPlan(plan.value)
+    savedSnapshot.value = JSON.stringify(plan.value)
+    feedbackVariant.value = 'success'
+    feedback.value = 'Planejamento semanal salvo como intenção de cardápio.'
+    return true
+  }
+  catch (error) { feedbackVariant.value = 'danger'; feedback.value = error instanceof Error ? error.message : 'Não foi possível salvar o planejamento.'; return false }
+  finally { saving.value = false }
 }
 
-function deriveMenus() {
-  if (!savePlan()) return
+async function deriveMenus() {
+  if (!await savePlan()) return
   deriving.value = true
-  const result = deriveDailyMenusFromWeeklyPlan(plan.value)
+  const result = await deriveDailyMenusFromWeeklyPlan(plan.value)
   dailyMenus.value = getDailyMenus()
   feedbackVariant.value = result.created.length ? 'success' : 'warning'
   feedback.value = result.created.length
@@ -226,7 +230,7 @@ function warnBeforeUnload(event: BeforeUnloadEvent) {
 
 watch(dirty, value => emit('dirty-change', value), { immediate: true })
 initializeCellSearches()
-onMounted(() => window.addEventListener('beforeunload', warnBeforeUnload))
+onMounted(async () => { window.addEventListener('beforeunload', warnBeforeUnload); await applyWeek(initialWeek) })
 onBeforeUnmount(() => {
   emit('dirty-change', false)
   window.removeEventListener('beforeunload', warnBeforeUnload)

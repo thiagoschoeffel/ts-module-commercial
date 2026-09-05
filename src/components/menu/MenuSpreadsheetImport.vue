@@ -3,7 +3,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import {
   Alert, Badge, Button, Card, CheckIcon, ClipboardListIcon, Drawer, InfoIcon, Progress, TriangleAlertIcon
 } from '@thiagoschoeffel/ts-components'
-import { formatMenuDate, saveDailyMenu } from '../../mocks/menuStore'
+import { formatMenuDate, importDailyMenus } from '../../mocks/menuStore'
 import {
   downloadMenuSpreadsheetTemplate, readMenuSpreadsheet, type MenuSpreadsheetPreview
 } from '../../services/menuSpreadsheet'
@@ -19,6 +19,8 @@ const readProgress = ref(0)
 const importProgress = ref(0)
 const importingDate = ref('')
 const importedDates = ref<string[]>([])
+const serverSkippedDates = ref<string[]>([])
+const serverIssues = ref<string[]>([])
 const canImport = computed(() => Boolean(preview.value?.menus.length) && !preview.value?.issues.length)
 const readProgressDescription = computed(() => {
   if (readProgress.value < 30) return 'Carregando o arquivo'
@@ -36,6 +38,8 @@ function reset() {
   processingRun += 1
   preview.value = undefined
   importedDates.value = []
+  serverSkippedDates.value = []
+  serverIssues.value = []
   dragging.value = false
   reading.value = false
   importing.value = false
@@ -83,19 +87,17 @@ async function importMenus() {
   importing.value = true
   importProgress.value = 5
   try {
-    const dates: string[] = []
-    for (const [index, menu] of menus.entries()) {
-      importingDate.value = menu.date
-      dates.push(saveDailyMenu(menu).date)
-      importProgress.value = 5 + Math.round(((index + 1) / menus.length) * 90)
-      await wait(0)
-    }
+    importingDate.value = menus[0]?.date ?? ''
+    const report = await importDailyMenus(menus)
+    const dates = report.createdDates
+    serverSkippedDates.value = report.skippedDates
+    serverIssues.value = report.issues.map(issue => issue.message)
+    importProgress.value = 95
     await wait(Math.max(0, 600 - (performance.now() - startedAt)))
     importProgress.value = 100
     await wait(150)
     importedDates.value = dates
-    emit('imported', dates)
-    preview.value = undefined
+    if (!serverIssues.value.length) { emit('imported', dates); preview.value = undefined }
   }
   finally { importing.value = false }
 }
@@ -128,6 +130,10 @@ async function importMenus() {
         :description="`${importedDates.length} ${importedDates.length === 1 ? 'cardápio foi criado' : 'cardápios foram criados'} como rascunho.`">
         <template #icon><CheckIcon /></template>
       </Alert>
+      <Alert v-if="serverSkippedDates.length" variants="warning" title="Dias existentes foram preservados"
+        :description="serverSkippedDates.map(date => formatMenuDate(date)).join(', ')" />
+      <Alert v-if="serverIssues.length" variants="danger" title="A API rejeitou a importação"
+        :description="serverIssues.join(' ')" />
 
       <template v-else>
         <div>
