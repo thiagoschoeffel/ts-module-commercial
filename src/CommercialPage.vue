@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { AlertDialog, Button, CalendarDaysIcon, ChevronLeftIcon, PageHeader, PlusIcon } from '@thiagoschoeffel/ts-components'
+import { computed, onMounted, ref } from 'vue'
+import { Alert, AlertDialog, Button, CalendarDaysIcon, ChevronLeftIcon, PageHeader, PlusIcon, TriangleAlertIcon } from '@thiagoschoeffel/ts-components'
 import '@thiagoschoeffel/ts-components/style.css'
 import './style.css'
 import { commercialPages } from './config/commercialPages'
 import MenuSpreadsheetImport from './components/menu/MenuSpreadsheetImport.vue'
 import { getCustomer } from './mocks/customerStore'
 import { formatMenuDate } from './mocks/menuStore'
+import { configureMenuApi } from './mocks/menuStore'
 import CustomerDetailPage from './pages/CustomerDetailPage.vue'
 import CustomerFormPage from './pages/CustomerFormPage.vue'
 import CustomerListPage from './pages/CustomerListPage.vue'
@@ -21,6 +22,7 @@ import PlanAcquisitionFormPage from './pages/PlanAcquisitionFormPage.vue'
 import PlanCreditsPage from './pages/PlanCreditsPage.vue'
 import PlanFormPage from './pages/PlanFormPage.vue'
 import type { CommercialSection, CustomerPage, FinancialPage, MenuPage, PlanPage } from './types/commercial'
+import type { AuthenticatedApiRequest } from './types/menu'
 import { navigate } from './utils/navigation'
 
 const props = withDefaults(defineProps<{
@@ -33,6 +35,7 @@ const props = withDefaults(defineProps<{
   planId?: string
   financialPage?: FinancialPage
   chargeId?: string
+  apiRequest?: AuthenticatedApiRequest
 }>(), {
   section: 'clientes',
   customerPage: 'list',
@@ -43,12 +46,23 @@ const props = withDefaults(defineProps<{
   planId: undefined,
   financialPage: 'list',
   chargeId: undefined
+  , apiRequest: undefined
 })
 
 const page = computed(() => commercialPages[props.section])
 const menuListKey = ref(0)
 const weeklyPlanDirty = ref(false)
 const menuReturnConfirmationOpen = ref(false)
+const authoritativeVersion = ref(0)
+const authoritativeLoading = ref(false)
+const authoritativeError = ref('')
+onMounted(async () => {
+  if (!props.apiRequest || props.section !== 'cardapios') return
+  authoritativeLoading.value = true
+  try { await configureMenuApi(props.apiRequest) }
+  catch (error) { authoritativeError.value = error instanceof Error ? error.message : 'Não foi possível carregar os cardápios.' }
+  finally { authoritativeLoading.value = false; authoritativeVersion.value++ }
+})
 const customer = computed(() => getCustomer(props.customerId))
 const pageTitle = computed(() => {
   if (props.section === 'financeiro') {
@@ -222,7 +236,11 @@ const isListPage = computed(() => props.section === 'clientes'
 
     </div>
 
-    <main :class="[
+    <Alert v-if="authoritativeError" class="mt-6" variants="danger" title="Não foi possível carregar os cardápios" :description="authoritativeError">
+      <template #icon><TriangleAlertIcon /></template>
+    </Alert>
+    <div v-else-if="authoritativeLoading" class="mt-6 h-40 animate-pulse rounded-lg border border-slate-200 bg-white" aria-label="Carregando cardápios" />
+    <main v-else :key="authoritativeVersion" :class="[
       (props.section === 'planos' && props.planPage === 'list') || (props.section === 'financeiro' && props.financialPage === 'list') ? '' : 'mt-6',
       isListPage ? 'md:min-h-0 md:flex-1' : ''
     ]">

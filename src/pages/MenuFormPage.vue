@@ -130,26 +130,27 @@ function endOfferDrag() {
   draggedOfferId.value = undefined
   dragOverOfferId.value = undefined
 }
-function persist(publish: boolean) {
+async function persist(publish: boolean) {
   showValidation.value = true
   if (hasErrors.value) return
   saving.value = true
   const wasDraft = draft.value.status === 'draft'
   const options = configuredOptions.value.map(option => ({ ...option }))
   const status = publish ? 'published' : draft.value.status
-  const menu = saveDailyMenu({
-    ...cloneValue(draft.value), date: selectedDate.value, status,
-    options, offers: cloneValue(selectedOffers.value),
-    publishedAt: draft.value.publishedAt ?? (publish ? new Date().toISOString() : undefined)
-  })
-  draft.value = menu
-  feedback.value = publish && wasDraft
-    ? 'Cardápio publicado e disponível para novos pedidos.'
-    : 'Alterações do cardápio salvas.'
-  saving.value = false
-  if (props.mode === 'create') {
-    navigationTimer = setTimeout(() => navigate(`/cardapios/${menu.date}`, true), 800)
+  try {
+    const menu = await saveDailyMenu({
+      ...cloneValue(draft.value), date: selectedDate.value, status,
+      options, offers: cloneValue(selectedOffers.value),
+      publishedAt: draft.value.publishedAt ?? (publish ? new Date().toISOString() : undefined)
+    })
+    draft.value = menu
+    feedback.value = publish && wasDraft
+      ? 'Cardápio publicado e disponível para novos pedidos.'
+      : 'Alterações do cardápio salvas.'
+    if (props.mode === 'create') navigationTimer = setTimeout(() => navigate(`/cardapios/${menu.date}`, true), 800)
   }
+  catch (error) { feedback.value = error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.' }
+  finally { saving.value = false }
 }
 function availabilityLabel(value: MenuAvailability) {
   return menuAvailabilityOptions.find(option => option.value === value)?.label ?? value
