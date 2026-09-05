@@ -53,3 +53,10 @@ npm run dev
 
 A aplicação é executada em http://localhost:4175. O host carrega o arquivo
 `remoteEntry.js` em http://localhost:4175/remoteEntry.js.
+
+## Contrato e qualidade
+
+O build gera `@mf-types.zip` a partir dos props expostos por `CommercialPage`,
+exige versões singleton compatíveis de Vue e do design system e bloqueia chunks
+acima do orçamento acordado. A biblioteca XLSX permanece em chunk isolado.
+`npm run ci` executa testes, tipos, build e budget.
