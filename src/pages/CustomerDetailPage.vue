@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Alert, Badge, Button, Card, ChevronLeftIcon, EmptyState, InfoIcon, sanitizeRichText, TriangleAlertIcon, UsersIcon } from '@thiagoschoeffel/ts-components'
 import { formatFullAddress, getCustomer } from '../mocks/customerStore'
-import { findDeliveryDriver } from '../mocks/deliveryDriverSource'
+import { findDeliveryDriver } from '../services/deliveryDrivers'
 import { navigate } from '../utils/navigation'
 
 const props = defineProps<{ customerId?: string }>()

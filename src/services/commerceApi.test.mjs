@@ -10,6 +10,7 @@ test('comercial carrega a fonte autoritativa e envia pagamento idempotente', asy
   const request = async (path, init) => {
     calls.push({ path, init })
     if (path === '/api/commerce') return Response.json(empty)
+    if (path === '/api/logistics') return Response.json({ drivers: [] })
     if (path === '/api/payments') return Response.json({ id: 'payment-1' }, { status: 201 })
     throw new Error(`rota inesperada: ${path}`)
   }

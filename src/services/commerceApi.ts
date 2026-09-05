@@ -2,6 +2,7 @@ import type { CustomerDetail } from '../types/customer'
 import type { CommercialPlan, CreditMovement, PlanAcquisition } from '../types/plan'
 import type { Charge, FinancialCreditMovement, Payment, PaymentAllocation, RegisterPaymentInput } from '../types/financial'
 import type { AuthenticatedApiRequest } from '../types/menu'
+import { setDeliveryDrivers } from './deliveryDrivers.ts'
 
 let request: AuthenticatedApiRequest | undefined
 export function commerceRequest() { if (!request) throw new Error('A sessão autenticada da API não está disponível.'); return request }
@@ -36,7 +37,8 @@ export function commerceSnapshot() { return snapshot }
 
 export async function configureCommerceApi(apiRequest: AuthenticatedApiRequest) { request = apiRequest; await reloadCommerce() }
 export async function reloadCommerce() {
-  const data = await json<ApiCommerce>('/api/commerce')
+  const [data, logistics] = await Promise.all([json<ApiCommerce>('/api/commerce'), json<{ drivers: Array<{ id: string, name: string, phone?: string, isActive: boolean }> }>('/api/logistics')])
+  setDeliveryDrivers(logistics.drivers.map(driver => ({ id: driver.id, name: driver.name, phone: driver.phone, active: driver.isActive })))
   const acquisitionById = new Map(data.acquisitions.map(item => [item.id, item]))
   const customerById = new Map(data.customers.map(item => [item.id, item]))
   snapshot = {

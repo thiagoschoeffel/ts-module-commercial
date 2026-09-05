@@ -5,7 +5,7 @@ import {
   MultiSelect, Select, Textarea, TriangleAlertIcon, type MultiSelectOption
 } from '@thiagoschoeffel/ts-components'
 import { getCustomer, nextCustomerId, saveCustomer } from '../mocks/customerStore'
-import { findDeliveryDriverByName, getDeliveryDrivers } from '../mocks/deliveryDriverSource'
+import { findDeliveryDriverByName, getDeliveryDrivers } from '../services/deliveryDrivers'
 import type { CustomerAddress, CustomerDetail, CustomerPreference } from '../types/customer'
 import { navigate } from '../utils/navigation'
 
