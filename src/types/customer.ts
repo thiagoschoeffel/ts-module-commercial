@@ -21,6 +21,7 @@ export interface CustomerDetail {
   name: string
   phone: string
   active: boolean
+  version?: number
   notes?: string
   addresses: CustomerAddress[]
   preferences: CustomerPreference[]

@@ -23,6 +23,7 @@ const active = ref(true)
 const showValidation = ref(false)
 const saving = ref(false)
 const saved = ref(false)
+const runtimeError = ref('')
 
 const creditsNumber = computed(() => Number(defaultCredits.value))
 const priceNumber = computed(() => Number(defaultPrice.value))
@@ -40,12 +41,12 @@ function returnUrl() {
   return candidate && /^\/planos(?:\?.*)?$/.test(candidate) ? candidate : '/planos'
 }
 function cancel() { navigate(returnUrl()) }
-function save() {
+async function save() {
   showValidation.value = true
   if (nameError.value || benefitError.value || offersError.value || creditsError.value || priceError.value || validityError.value || (props.mode === 'edit' && !source.value)) return
   saving.value = true
-  window.setTimeout(() => {
-    savePlan({
+  try {
+    await savePlan({
       id: props.mode === 'edit' && props.planId ? props.planId : nextPlanId(),
       name: name.value.trim(), description: description.value.trim() || undefined,
       benefit: { description: benefitDescription.value.trim(), compatibleOfferIds: [...compatibleOfferIds.value], compatibleOfferNames: selectedOfferNames.value },
@@ -54,7 +55,8 @@ function save() {
     })
     saving.value = false; saved.value = true
     window.setTimeout(cancel, 650)
-  }, 350)
+  }
+  catch (error) { runtimeError.value = error instanceof Error ? error.message : 'Não foi possível salvar o plano.'; saving.value = false }
 }
 
 onMounted(() => {
@@ -73,6 +75,7 @@ onMounted(() => {
 <template>
   <form class="space-y-4 pb-20 lg:pb-0" @submit.prevent="save">
     <Alert v-if="saved" variants="success" description="Plano salvo com sucesso."><template #icon><CheckIcon /></template></Alert>
+    <Alert v-if="runtimeError" variants="danger" title="Não foi possível salvar" :description="runtimeError"><template #icon><TriangleAlertIcon /></template></Alert>
     <Alert v-if="props.mode === 'edit' && !source" variants="danger" title="Plano não encontrado" description="Volte para a lista e selecione um plano válido."><template #icon><TriangleAlertIcon /></template></Alert>
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div class="space-y-4">

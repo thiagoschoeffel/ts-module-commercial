@@ -92,12 +92,12 @@ function cancel() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
   navigate(candidate && /^\/financeiro(?:\/cobrancas\/[A-Za-z0-9-]+)?(?:\?.*)?$/.test(candidate) ? candidate : '/financeiro')
 }
-function submit() {
+async function submit() {
   errorMessage.value = ''
   if (!canSave.value || !selectedCustomer.value) { errorMessage.value = 'Revise os campos e os valores alocados antes de registrar.'; return }
   saving.value = true
   try {
-    registerPayment({ customerId: customerId.value, customerNameSnapshot: selectedCustomer.value.name, amount: amountNumber.value, receivedAt: receivedAt.value, method: method.value, reference: reference.value, responsibleSnapshot: currentResponsible, allocations: allocations.value })
+    await registerPayment({ customerId: customerId.value, customerNameSnapshot: selectedCustomer.value.name, amount: amountNumber.value, receivedAt: receivedAt.value, method: method.value, reference: reference.value, responsibleSnapshot: currentResponsible, allocations: allocations.value })
     const returnUrl = new URLSearchParams(window.location.search).get('retorno')
     navigate(returnUrl && /^\/financeiro\/cobrancas\/[A-Za-z0-9-]+(?:\?.*)?$/.test(returnUrl) ? returnUrl : '/financeiro?tab=pagamentos')
   }
