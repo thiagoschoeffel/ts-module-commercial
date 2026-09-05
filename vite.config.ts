@@ -3,6 +3,11 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
+const sharedDependencies = {
+  vue: { singleton: true, requiredVersion: '^3.5.42', strictVersion: true },
+  '@thiagoschoeffel/ts-components': { singleton: true, requiredVersion: '^0.7.8', strictVersion: true, import: false },
+}
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
@@ -14,8 +19,8 @@ export default defineConfig({
       exposes: {
         './CommercialPage': './src/CommercialPage.vue'
       },
-      dts: false,
-      shared: ['vue']
+      dts: true,
+      shared: sharedDependencies
     })
   ],
   server: {

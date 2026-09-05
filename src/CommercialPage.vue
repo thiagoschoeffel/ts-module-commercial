@@ -21,23 +21,11 @@ import PaymentFormPage from './pages/PaymentFormPage.vue'
 import PlanAcquisitionFormPage from './pages/PlanAcquisitionFormPage.vue'
 import PlanCreditsPage from './pages/PlanCreditsPage.vue'
 import PlanFormPage from './pages/PlanFormPage.vue'
-import type { CommercialSection, CustomerPage, FinancialPage, MenuPage, PlanPage } from './types/commercial'
-import type { AuthenticatedApiRequest } from './types/menu'
 import { navigate } from './utils/navigation'
 import { configureCommerceApi } from './services/commerceApi'
+import type { CommercialPageProps } from './types/federation'
 
-const props = withDefaults(defineProps<{
-  section?: CommercialSection
-  customerPage?: CustomerPage
-  customerId?: string
-  menuPage?: MenuPage
-  menuDate?: string
-  planPage?: PlanPage
-  planId?: string
-  financialPage?: FinancialPage
-  chargeId?: string
-  apiRequest?: AuthenticatedApiRequest
-}>(), {
+const props = withDefaults(defineProps<CommercialPageProps>(), {
   section: 'clientes',
   customerPage: 'list',
   customerId: undefined,

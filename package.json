@@ -7,7 +7,14 @@
     "dev": "vite --port 4175 --strictPort",
     "test": "node --test src/services/*.test.mjs",
     "typecheck": "vue-tsc --noEmit",
-    "build": "vue-tsc --noEmit && vite build"
+    "build": "vue-tsc --noEmit && vite build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
+    "ci": "npm test && npm run build && npm run check:bundle"
+  },
+  "bundleBudget": {
+    "js": { "bytes": 520000, "gzipBytes": 170000 },
+    "css": { "bytes": 100000, "gzipBytes": 20000 },
+    "remoteEntry": { "bytes": 25000, "gzipBytes": 8000 }
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
