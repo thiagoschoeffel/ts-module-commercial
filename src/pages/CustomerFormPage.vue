@@ -33,6 +33,7 @@ const addressDrawerOpen = ref(false)
 const showValidation = ref(false)
 const saving = ref(false)
 const savedMessage = ref('')
+const runtimeError = ref('')
 const cancelConfirmationOpen = ref(false)
 const initialSnapshot = ref('')
 let navigationTimeout: ReturnType<typeof setTimeout> | undefined
@@ -172,10 +173,11 @@ function leavePage() {
   navigate(props.mode === 'edit' && props.customerId ? detailUrl(props.customerId) : returnUrl())
 }
 function cancel() { if (isDirty.value) cancelConfirmationOpen.value = true; else leavePage() }
-function save() {
+async function save() {
   showValidation.value = true
   if (nameError.value || phoneError.value || addressDraft.value) return
   saving.value = true
+  runtimeError.value = ''
   const id = props.mode === 'edit' && props.customerId ? props.customerId : nextCustomerId()
   const customer: CustomerDetail = {
     id, name: name.value.trim(), phone: phone.value.trim(), active: active.value,
@@ -190,13 +192,14 @@ function save() {
     preferredPaymentCondition: optionalPreference(preferredPaymentCondition.value),
     preferredPaymentMethod: optionalPreference(preferredPaymentMethod.value)
   }
-  navigationTimeout = setTimeout(() => {
-    saveCustomer(customer)
+  try {
+    const savedId = await saveCustomer(customer)
     saving.value = false
     initialSnapshot.value = snapshot.value
     savedMessage.value = props.mode === 'edit' ? 'Alterações do cliente salvas.' : 'Cliente criado com sucesso.'
-    navigationTimeout = setTimeout(() => navigate(detailUrl(id)), 700)
-  }, 450)
+    navigationTimeout = setTimeout(() => navigate(detailUrl(savedId)), 700)
+  }
+  catch (error) { runtimeError.value = error instanceof Error ? error.message : 'Não foi possível salvar o cliente.'; saving.value = false }
 }
 function warnBeforeUnload(event: BeforeUnloadEvent) {
   if (!isDirty.value || savedMessage.value) return
@@ -228,6 +231,7 @@ watch(addressDrawerOpen, open => { if (!open) clearAddressDraft() })
 
 <template>
   <form class="space-y-4 pb-20 lg:pb-0" @submit.prevent="save">
+    <Alert v-if="runtimeError" variants="danger" title="Não foi possível salvar" :description="runtimeError"><template #icon><TriangleAlertIcon /></template></Alert>
     <Alert v-if="savedMessage" variants="success" :description="savedMessage"><template #icon><CheckIcon /></template></Alert>
     <Alert v-if="props.mode === 'edit' && !getCustomer(props.customerId)" variants="danger" title="Cliente não encontrado" description="Volte para a lista e selecione um cadastro válido."><template #icon><TriangleAlertIcon /></template></Alert>
 

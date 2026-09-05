@@ -32,14 +32,13 @@ function returnUrl() {
 
 function cancel() { navigate(returnUrl()) }
 
-function save() {
+async function save() {
   showValidation.value = true
   runtimeError.value = ''
   if (formError.value) return
   saving.value = true
-  window.setTimeout(() => {
-    try {
-      refundConsumption(consumptionMovementId.value, note.value, currentResponsible)
+  try {
+      await refundConsumption(consumptionMovementId.value, note.value, currentResponsible)
       saved.value = true
       window.setTimeout(cancel, 700)
     }
@@ -47,7 +46,6 @@ function save() {
       runtimeError.value = error instanceof Error ? error.message : 'Não foi possível registrar o estorno.'
     }
     finally { saving.value = false }
-  }, 350)
 }
 
 function movementSummary(movement?: CreditMovement) {

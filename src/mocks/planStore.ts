@@ -1,22 +1,5 @@
-import { mockCreditMovements, mockPlanAcquisitions, mockPlans } from './plans'
 import type { AcquisitionWithBalance, CommercialPlan, CreditMovement, PlanAcquisition } from '../types/plan'
-
-const planStorageKey = 'ts-commercial-plans-v1'
-const acquisitionStorageKey = 'ts-commercial-plan-acquisitions-v1'
-const movementStorageKey = 'ts-commercial-credit-movements-v1'
-
-function readSaved<T>(key: string): T[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '[]')
-    return Array.isArray(parsed) ? parsed as T[] : []
-  }
-  catch { return [] }
-}
-
-function mergeById<T extends { id: string }>(saved: T[], baseline: T[]) {
-  const savedIds = new Set(saved.map(item => item.id))
-  return [...saved, ...baseline.filter(item => !savedIds.has(item.id))]
-}
+import { acquirePlanApi, adjustPlanCreditApi, commerceSnapshot, savePlanApi } from '../services/commerceApi'
 
 function nextId(prefix: string, ids: string[]) {
   const values = ids.map(id => Number(id.replace(/\D/g, ''))).filter(Number.isFinite)
@@ -24,26 +7,23 @@ function nextId(prefix: string, ids: string[]) {
 }
 
 export function getPlans(): CommercialPlan[] {
-  return structuredClone(mergeById(readSaved<CommercialPlan>(planStorageKey), mockPlans))
+  return structuredClone(commerceSnapshot().plans)
 }
 
 export function getPlan(id?: string) {
   return id ? getPlans().find(plan => plan.id === id) : undefined
 }
 
-export function savePlan(plan: CommercialPlan) {
-  const saved = readSaved<CommercialPlan>(planStorageKey).filter(current => current.id !== plan.id)
-  localStorage.setItem(planStorageKey, JSON.stringify([structuredClone(plan), ...saved]))
-}
+export const savePlan = savePlanApi
 
 export function nextPlanId() { return nextId('plano', getPlans().map(item => item.id)) }
 
 export function getAcquisitions(): PlanAcquisition[] {
-  return structuredClone(mergeById(readSaved<PlanAcquisition>(acquisitionStorageKey), mockPlanAcquisitions))
+  return structuredClone(commerceSnapshot().acquisitions)
 }
 
 export function getCreditMovements(): CreditMovement[] {
-  return structuredClone(mergeById(readSaved<CreditMovement>(movementStorageKey), mockCreditMovements))
+  return structuredClone(commerceSnapshot().movements)
 }
 
 export function getAcquisitionsWithBalance(): AcquisitionWithBalance[] {
@@ -58,26 +38,11 @@ export function getAcquisitionsWithBalance(): AcquisitionWithBalance[] {
   }))
 }
 
-export function saveAcquisition(acquisition: PlanAcquisition, responsible = 'Ana (Administradora)') {
-  const saved = readSaved<PlanAcquisition>(acquisitionStorageKey).filter(current => current.id !== acquisition.id)
-  localStorage.setItem(acquisitionStorageKey, JSON.stringify([structuredClone(acquisition), ...saved]))
-  const movement: CreditMovement = {
-    id: nextMovementId(), acquisitionId: acquisition.id,
-    customerId: acquisition.customerId, customerNameSnapshot: acquisition.customerNameSnapshot,
-    planId: acquisition.planId, planNameSnapshot: acquisition.planNameSnapshot,
-    type: 'acquired', quantity: acquisition.quantity, occurredAt: acquisition.createdAt,
-    originType: 'acquisition', originId: acquisition.id, responsible
-  }
-  saveMovements([movement])
-}
+export async function saveAcquisition(acquisition: PlanAcquisition) { await acquirePlanApi({ customerId: acquisition.customerId, planId: acquisition.planId, credits: acquisition.quantity, paidAmount: acquisition.paidAmount, purchasedOn: acquisition.purchasedAt, expiresOn: acquisition.expiresAt }) }
 
 export function nextAcquisitionId() { return nextId('aquisicao', getAcquisitions().map(item => item.id)) }
 export function nextMovementId() { return nextId('mov', getCreditMovements().map(item => item.id)) }
 
-function saveMovements(movements: CreditMovement[]) {
-  const saved = readSaved<CreditMovement>(movementStorageKey)
-  localStorage.setItem(movementStorageKey, JSON.stringify([...structuredClone(movements), ...saved]))
-}
 
 /** Efeito interno da confirmação de pedido; não deve ser exposto como ação administrativa avulsa. */
 export function applyConfirmedOrderCreditConsumption(input: { customerId: string; planId: string; offerId: string; offerName: string; quantity: number; orderId: string; responsible: string }) {
@@ -105,17 +70,14 @@ export function applyConfirmedOrderCreditConsumption(input: { customerId: string
     remaining -= allocated
     if (!remaining) break
   }
-  saveMovements(movements)
+  void movements
 }
 
-export function refundConsumption(movementId: string, note: string, responsible: string) {
+export async function refundConsumption(movementId: string, note: string, responsible: string) {
   const source = getCreditMovements().find(item => item.id === movementId && item.type === 'consumption')
   if (!source) throw new Error('Consumo não encontrado.')
   const alreadyRefunded = getCreditMovements().some(item => item.type === 'refund' && item.relatedMovementId === source.id)
   if (alreadyRefunded) throw new Error('Este consumo já foi estornado.')
-  saveMovements([{
-    ...source, id: nextMovementId(), type: 'refund', quantity: Math.abs(source.quantity),
-    occurredAt: new Date().toISOString(), originType: 'cancellation', relatedMovementId: source.id,
-    note: note.trim() || 'Cancelamento elegível.', responsible
-  }])
+  void responsible
+  await adjustPlanCreditApi(source.acquisitionId, Math.abs(source.quantity), note.trim() || 'Estorno administrativo do consumo.', source.id)
 }

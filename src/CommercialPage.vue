@@ -24,6 +24,7 @@ import PlanFormPage from './pages/PlanFormPage.vue'
 import type { CommercialSection, CustomerPage, FinancialPage, MenuPage, PlanPage } from './types/commercial'
 import type { AuthenticatedApiRequest } from './types/menu'
 import { navigate } from './utils/navigation'
+import { configureCommerceApi } from './services/commerceApi'
 
 const props = withDefaults(defineProps<{
   section?: CommercialSection
@@ -57,13 +58,16 @@ const authoritativeVersion = ref(0)
 const authoritativeLoading = ref(false)
 const authoritativeError = ref('')
 onMounted(async () => {
-  if (!props.apiRequest || props.section !== 'cardapios') return
+  if (!props.apiRequest) { authoritativeError.value = 'A sessão autenticada da API não está disponível.'; return }
   authoritativeLoading.value = true
-  try { await configureMenuApi(props.apiRequest) }
-  catch (error) { authoritativeError.value = error instanceof Error ? error.message : 'Não foi possível carregar os cardápios.' }
+  try {
+    if (props.section === 'cardapios') await configureMenuApi(props.apiRequest)
+    else await configureCommerceApi(props.apiRequest)
+  }
+  catch (error) { authoritativeError.value = error instanceof Error ? error.message : 'Não foi possível carregar os dados comerciais.' }
   finally { authoritativeLoading.value = false; authoritativeVersion.value++ }
 })
-const customer = computed(() => getCustomer(props.customerId))
+const customer = computed(() => { void authoritativeVersion.value; return getCustomer(props.customerId) })
 const pageTitle = computed(() => {
   if (props.section === 'financeiro') {
     if (props.financialPage === 'new-payment') return 'Registrar pagamento'

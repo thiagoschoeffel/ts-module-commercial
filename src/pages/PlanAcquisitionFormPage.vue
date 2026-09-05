@@ -29,6 +29,7 @@ const expiresAtValue = shallowRef<DateValue | undefined>()
 const showValidation = ref(false)
 const saving = ref(false)
 const saved = ref(false)
+const runtimeError = ref('')
 const selectedCustomer = computed(() => customers.find(customer => customer.id === customerId.value))
 const customerOptions = computed(() => {
   const query = customerSearch.value.trim().toLocaleLowerCase('pt-BR')
@@ -78,12 +79,12 @@ function returnUrl() {
   return candidate && /^\/planos(?:\?.*)?$/.test(candidate) ? candidate : '/planos?tab=aquisicoes'
 }
 function cancel() { navigate(returnUrl()) }
-function save() {
+async function save() {
   showValidation.value = true
   if (customerError.value || planError.value || quantityError.value || amountError.value || expirationError.value || !purchasedAt.value || !selectedCustomer.value || !selectedPlan.value) return
   saving.value = true
-  window.setTimeout(() => {
-    saveAcquisition({
+  try {
+    await saveAcquisition({
       id: nextAcquisitionId(), customerId: selectedCustomer.value!.id,
       customerNameSnapshot: selectedCustomer.value!.name, planId: selectedPlan.value!.id,
       planNameSnapshot: selectedPlan.value!.name, benefitSnapshot: structuredClone(selectedPlan.value!.benefit),
@@ -92,7 +93,8 @@ function save() {
     })
     saving.value = false; saved.value = true
     window.setTimeout(cancel, 650)
-  }, 350)
+  }
+  catch (error) { runtimeError.value = error instanceof Error ? error.message : 'Não foi possível registrar a aquisição.'; saving.value = false }
 }
 function currency(value: number) { return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 </script>
@@ -100,6 +102,7 @@ function currency(value: number) { return value.toLocaleString('pt-BR', { style:
 <template>
   <form class="space-y-4 pb-20 lg:pb-0" @submit.prevent="save">
     <Alert v-if="saved" variants="success" description="Aquisição registrada e créditos adicionados ao extrato."><template #icon><CheckIcon /></template></Alert>
+    <Alert v-if="runtimeError" variants="danger" title="Não foi possível registrar" :description="runtimeError"><template #icon><TriangleAlertIcon /></template></Alert>
     <Alert variants="info" title="Condições históricas preservadas" description="Plano, benefício, quantidade, valor e validade serão copiados para esta aquisição e não mudarão com o cadastro do plano."><template #icon><InfoIcon /></template></Alert>
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div class="space-y-4">

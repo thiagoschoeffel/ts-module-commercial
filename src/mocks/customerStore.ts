@@ -1,22 +1,8 @@
-import { mockCustomers } from './customers'
 import type { CustomerDetail, CustomerSummary } from '../types/customer'
-
-const storageKey = 'ts-commercial-customers-v1'
-
-function savedCustomers() {
-  try {
-    const value = localStorage.getItem(storageKey)
-    return value ? JSON.parse(value) as CustomerDetail[] : []
-  }
-  catch {
-    return []
-  }
-}
+import { commerceSnapshot, saveCustomerApi } from '../services/commerceApi'
 
 export function getCustomers(): CustomerDetail[] {
-  const saved = savedCustomers()
-  const savedIds = new Set(saved.map(customer => customer.id))
-  return structuredClone([...saved, ...mockCustomers.filter(customer => !savedIds.has(customer.id))])
+  return structuredClone(commerceSnapshot().customers)
 }
 
 export function getCustomer(customerId?: string) {
@@ -31,14 +17,10 @@ export function getCustomerSummaries(): CustomerSummary[] {
   }))
 }
 
-export function saveCustomer(customer: CustomerDetail) {
-  const saved = savedCustomers().filter(current => current.id !== customer.id)
-  localStorage.setItem(storageKey, JSON.stringify([structuredClone(customer), ...saved]))
-}
+export const saveCustomer = saveCustomerApi
 
 export function nextCustomerId() {
-  const numbers = getCustomers().map(customer => Number(customer.id.replace(/\D/g, ''))).filter(Number.isFinite)
-  return `cli-${Math.max(1000, ...numbers) + 1}`
+  return crypto.randomUUID()
 }
 
 export function formatAddressSummary(customer: CustomerDetail) {

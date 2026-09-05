@@ -13,6 +13,7 @@ export interface CommercialPlan {
   defaultPrice: number
   validityDays?: number
   active: boolean
+  version?: number
 }
 
 export interface PlanAcquisition {
