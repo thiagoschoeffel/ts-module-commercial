@@ -4,9 +4,10 @@ Aplicação independente que expõe `CommercialPage.vue` por Module Federation.
 O módulo contém as experiências de Clientes, Cardápios, Planos e Créditos e Financeiro,
 integradas à API autenticada e isoladas pela Organização da sessão.
 
-A preferência de entregador do Cliente usa o identificador do cadastro mantido
-em Gestão. Somente entregadores ativos podem ser escolhidos; uma preferência já
-existente continua visível caso o entregador seja inativado.
+A preferência de entregador do Cliente usa o identificador autoritativo do
+cadastro mantido em Gestão. A lista vem de `/api/logistics`, somente entregadores
+ativos podem ser escolhidos e a API rejeita referências externas à Organização.
+Uma preferência histórica continua visível quando o entregador é inativado.
 
 ## Cardápios
 
