@@ -6,9 +6,10 @@ import {
   Select, Textarea, TriangleAlertIcon, type ComboboxOption, type DateValue
 } from '@thiagoschoeffel/ts-components'
 import { getCustomerSummaries } from '../mocks/customerStore'
-import { getChargesWithBalance, registerPayment } from '../mocks/financialStore'
+import { getChargesWithBalance, refreshFinancialData, registerPayment } from '../mocks/financialStore'
 import { localDateIso } from '../mocks/menuStore'
 import type { PaymentMethod } from '../types/financial'
+import { paymentIntentFor, type PaymentIntent } from '../services/paymentIntent'
 import { navigate } from '../utils/navigation'
 
 const customers = getCustomerSummaries().filter(customer => customer.active)
@@ -34,6 +35,9 @@ const reference = ref('')
 const allocationValues = ref<Record<string, string>>(requestedCharge ? { [requestedCharge.id]: requestedCharge.balance.toFixed(2) } : {})
 const saving = ref(false)
 const errorMessage = ref('')
+const paymentRecorded = ref(false)
+const synchronizationError = ref('')
+let paymentIntent: PaymentIntent | undefined
 
 const customerOptions = computed(() => {
   const query = customerSearch.value.trim().toLocaleLowerCase('pt-BR')
@@ -49,7 +53,7 @@ const allocations = computed(() => customerCharges.value.map(charge => ({ charge
 const allocatedTotal = computed(() => allocations.value.reduce((total, item) => total + item.amount, 0))
 const surplus = computed(() => Math.max(0, amountNumber.value - allocatedTotal.value))
 const remainingToAllocate = computed(() => Math.max(0, amountNumber.value - allocatedTotal.value))
-const canSave = computed(() => Boolean(customerId.value && receivedAt.value && method.value && amountNumber.value > 0 && allocatedTotal.value > 0 && allocatedTotal.value <= amountNumber.value && allocations.value.every(allocation => allocation.amount <= (customerCharges.value.find(charge => charge.id === allocation.chargeId)?.balance ?? 0))))
+const canSave = computed(() => Boolean(!paymentRecorded.value && customerId.value && receivedAt.value && method.value && amountNumber.value > 0 && allocatedTotal.value > 0 && allocatedTotal.value <= amountNumber.value && allocations.value.every(allocation => allocation.amount <= (customerCharges.value.find(charge => charge.id === allocation.chargeId)?.balance ?? 0))))
 
 function currency(value: number) { return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 function date(value: string) { return new Intl.DateTimeFormat('pt-BR').format(new Date(`${value}T12:00:00`)) }
@@ -92,22 +96,45 @@ function cancel() {
   const candidate = new URLSearchParams(window.location.search).get('retorno')
   navigate(candidate && /^\/financeiro(?:\/cobrancas\/[A-Za-z0-9-]+)?(?:\?.*)?$/.test(candidate) ? candidate : '/financeiro')
 }
+function destination() {
+  const returnUrl = new URLSearchParams(window.location.search).get('retorno')
+  return returnUrl && /^\/financeiro\/cobrancas\/[A-Za-z0-9-]+(?:\?.*)?$/.test(returnUrl) ? returnUrl : '/financeiro?tab=pagamentos'
+}
 async function submit() {
   errorMessage.value = ''
   if (!canSave.value || !selectedCustomer.value) { errorMessage.value = 'Revise os campos e os valores alocados antes de registrar.'; return }
   saving.value = true
   try {
-    await registerPayment({ customerId: customerId.value, customerNameSnapshot: selectedCustomer.value.name, amount: amountNumber.value, receivedAt: receivedAt.value, method: method.value, reference: reference.value, responsibleSnapshot: currentResponsible, allocations: allocations.value })
-    const returnUrl = new URLSearchParams(window.location.search).get('retorno')
-    navigate(returnUrl && /^\/financeiro\/cobrancas\/[A-Za-z0-9-]+(?:\?.*)?$/.test(returnUrl) ? returnUrl : '/financeiro?tab=pagamentos')
+    const input = { customerId: customerId.value, customerNameSnapshot: selectedCustomer.value.name, amount: amountNumber.value, receivedAt: receivedAt.value, method: method.value, reference: reference.value, responsibleSnapshot: currentResponsible, allocations: allocations.value }
+    paymentIntent = paymentIntentFor(input, paymentIntent)
+    const result = await registerPayment({ ...input, idempotencyKey: paymentIntent.idempotencyKey })
+    if (result.synchronized) navigate(destination())
+    else {
+      paymentRecorded.value = true
+      synchronizationError.value = 'O pagamento foi registrado, mas a atualização da tela falhou. Atualize os dados sem registrar o pagamento novamente.'
+    }
   }
   catch (error) { errorMessage.value = error instanceof Error ? error.message : 'Não foi possível registrar o pagamento.'; saving.value = false }
+  finally { saving.value = false }
+}
+async function refreshAfterPayment() {
+  saving.value = true
+  synchronizationError.value = ''
+  try {
+    await refreshFinancialData()
+    navigate(destination())
+  }
+  catch {
+    synchronizationError.value = 'O pagamento continua registrado, mas os dados ainda não puderam ser atualizados. Tente novamente.'
+  }
+  finally { saving.value = false }
 }
 </script>
 
 <template>
   <form class="space-y-4" @submit.prevent="submit">
     <Alert v-if="errorMessage" variants="danger" :description="errorMessage"><template #icon><TriangleAlertIcon /></template></Alert>
+    <Alert v-if="synchronizationError" variants="warning" title="Pagamento registrado" :description="synchronizationError"><template #icon><TriangleAlertIcon /></template></Alert>
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div class="space-y-4">
         <Card>
@@ -143,7 +170,7 @@ async function submit() {
           <template #header><h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Resumo</h2></template>
           <dl class="space-y-3 text-sm"><div class="flex justify-between gap-3"><dt class="text-slate-500">Recebido</dt><dd class="font-medium text-slate-800">{{ currency(amountNumber) }}</dd></div><div class="flex justify-between gap-3"><dt class="text-slate-500">Alocado</dt><dd class="font-medium text-blue-700">{{ currency(allocatedTotal) }}</dd></div><div class="flex justify-between gap-3"><dt class="text-slate-500">Não alocado</dt><dd class="font-semibold text-emerald-700">{{ currency(remainingToAllocate) }}</dd></div></dl>
           <Alert v-if="surplus > 0 && allocatedTotal > 0" class="mt-4" variants="info" title="Crédito financeiro"><template #icon><InfoIcon /></template>O excedente de {{ currency(surplus) }} será lançado no extrato do cliente.</Alert>
-          <template #footer><Button type="submit" class="w-full" :disabled="!canSave" :loading="saving">Registrar pagamento</Button></template>
+          <template #footer><Button v-if="paymentRecorded" type="button" class="w-full" :loading="saving" @click="refreshAfterPayment">Atualizar dados</Button><Button v-else type="submit" class="w-full" :disabled="!canSave" :loading="saving">Registrar pagamento</Button></template>
         </Card>
       </aside>
     </div>

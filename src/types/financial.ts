@@ -57,6 +57,7 @@ export interface PaymentWithAllocation extends Payment {
 }
 
 export interface RegisterPaymentInput {
+  idempotencyKey: string
   customerId: string
   customerNameSnapshot: string
   amount: number
