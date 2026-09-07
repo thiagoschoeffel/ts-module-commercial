@@ -1,5 +1,5 @@
 import type { Charge, ChargeWithBalance, FinancialCreditMovement, Payment, PaymentAllocation, PaymentWithAllocation, RegisterPaymentInput } from '../types/financial'
-import { commerceSnapshot, registerPaymentApi } from '../services/commerceApi'
+import { commerceSnapshot, registerPaymentApi, reloadCommerce } from '../services/commerceApi'
 
 export function getCharges(): Charge[] { return structuredClone(commerceSnapshot().charges) }
 export function getPayments(): Payment[] { return structuredClone(commerceSnapshot().payments) }
@@ -21,4 +21,5 @@ export function getPaymentsWithAllocation(): PaymentWithAllocation[] {
   return getPayments().map(payment => { const allocatedAmount = allocations.filter(item => item.paymentId === payment.id).reduce((total, item) => total + item.amount, 0); return { ...payment, allocatedAmount, financialCreditGenerated: Number((payment.amount - allocatedAmount).toFixed(2)) } })
 }
 export async function registerPayment(input: RegisterPaymentInput) { return registerPaymentApi(input) }
+export async function refreshFinancialData() { await reloadCommerce() }
 export function financialCreditBalance(customerId?: string) { return getFinancialCreditMovements().filter(item => !customerId || item.customerId === customerId).reduce((total, item) => total + item.amount, 0) }
