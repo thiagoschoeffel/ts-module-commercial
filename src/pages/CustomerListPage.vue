@@ -269,12 +269,7 @@ onBeforeUnmount(() => {
       </div>
 
       <DataTable
-      :class="[
-        'desktop-only-flex min-h-0 flex-1',
-        !isLoading && (hasLoadingError || visibleCustomers.length === 0)
-          ? '[&_table]:h-full [&_tbody>tr>td]:align-middle'
-          : ''
-      ]"
+      class="desktop-only-flex min-h-0 flex-1"
       :columns="columns" :rows="hasLoadingError ? [] : rows"
       :selectable="false" :loading="isLoading && !hasLoadingError"
       sort-mode="manual" :sort-key="activeSortKey" :sort-direction="activeSortDirection"

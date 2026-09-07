@@ -233,13 +233,19 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
     </Card>
 
     <Card class="mt-4 md:min-h-[27rem] md:flex-1 [&>div]:flex [&>div]:min-h-0 [&>div]:flex-col [&>div]:p-4">
-      <EmptyState v-if="hasError || (!isLoading && pageItems.length === 0)" :bordered="false" size="large" :title="hasError ? 'Não foi possível carregar o financeiro' : 'Nenhum registro encontrado'" :description="hasError ? 'Verifique a conexão e tente novamente.' : hasFilters ? 'Nenhum registro corresponde à busca atual.' : 'Os registros financeiros aparecerão aqui.'" :role="hasError ? 'alert' : 'status'">
-        <template #icon><TriangleAlertIcon v-if="hasError" /><SearchIcon v-else-if="hasFilters" /><CircleDollarSignIcon v-else /></template>
-        <template #action><Button v-if="hasError" size="small" @click="setLoading">Tentar novamente</Button><Button v-else-if="hasFilters" size="small" variant="secondary" @click="clearFilters">Limpar filtros</Button></template>
-      </EmptyState>
-
-      <template v-else>
         <div class="space-y-3 md:hidden">
+          <template v-if="isLoading && !hasError">
+            <div v-for="index in 4" :key="index" class="animate-pulse rounded-lg border border-slate-200 bg-white p-4 shadow-sm" aria-hidden="true">
+              <div class="h-4 w-40 rounded bg-slate-200" />
+              <div class="mt-3 h-3 w-28 rounded bg-slate-100" />
+              <div class="mt-4 h-3 w-48 max-w-full rounded bg-slate-100" />
+            </div>
+          </template>
+          <EmptyState v-else-if="hasError || pageItems.length === 0" size="large" :title="hasError ? 'Não foi possível carregar o financeiro' : 'Nenhum registro encontrado'" :description="hasError ? 'Verifique a conexão e tente novamente.' : hasFilters ? 'Nenhum registro corresponde à busca atual.' : 'Os registros financeiros aparecerão aqui.'" :role="hasError ? 'alert' : 'status'">
+            <template #icon><TriangleAlertIcon v-if="hasError" /><SearchIcon v-else-if="hasFilters" /><CircleDollarSignIcon v-else /></template>
+            <template #action><Button v-if="hasError" size="small" @click="setLoading">Tentar novamente</Button><Button v-else-if="hasFilters" size="small" variant="secondary" @click="clearFilters">Limpar filtros</Button></template>
+          </EmptyState>
+          <template v-else>
           <Card v-for="item in pageItems" :key="item.id">
             <template v-if="activeView === 'cobrancas'">
               <div class="flex items-start justify-between gap-3"><div><p class="font-semibold text-slate-800">{{ (item as ChargeWithBalance).customerNameSnapshot }}</p><p class="mt-1 text-xs text-slate-500">{{ item.id }} · {{ (item as ChargeWithBalance).orderId }}</p></div><Badge :variant="statusVariant((item as ChargeWithBalance).status)">{{ statusLabel((item as ChargeWithBalance).status) }}</Badge></div>
@@ -249,9 +255,10 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
             <template v-else-if="activeView === 'pagamentos'"><div class="flex justify-between gap-3"><div><p class="font-semibold text-slate-800">{{ item.customerNameSnapshot }}</p><p class="mt-1 text-xs text-slate-500">{{ item.id }} · {{ date((item as PaymentWithAllocation).receivedAt) }}</p></div><strong class="text-slate-800">{{ currency(item.amount) }}</strong></div><p class="mt-3 text-sm text-slate-500">{{ methodLabel((item as PaymentWithAllocation).method) }} · {{ currency((item as PaymentWithAllocation).allocatedAmount) }} alocados</p></template>
             <template v-else><div class="flex justify-between gap-3"><div><p class="font-semibold text-slate-800">{{ item.customerNameSnapshot }}</p><p class="mt-1 text-xs text-slate-500">{{ creditTypeLabel((item as FinancialCreditMovement).type) }} · {{ (item as FinancialCreditMovement).originId }}</p></div><strong :class="item.amount >= 0 ? 'text-emerald-700' : 'text-red-700'">{{ item.amount >= 0 ? '+' : '' }}{{ currency(item.amount) }}</strong></div><p class="mt-3 text-xs text-slate-500">{{ dateTime((item as FinancialCreditMovement).occurredAt) }}</p></template>
           </Card>
+          </template>
         </div>
 
-        <DataTable class="desktop-only-flex flex-1 md:min-h-80" :columns="columns" :rows="rows" :selectable="false" :loading="isLoading" :sort-key="sortKey" :sort-direction="sortDirection" sort-mode="manual" label="Registros financeiros" actions-label="Ação" @sort="updateSort">
+        <DataTable class="desktop-only-flex min-h-0 flex-1 md:min-h-80" :columns="columns" :rows="hasError ? [] : rows" :selectable="false" :loading="isLoading && !hasError" :sort-key="sortKey" :sort-direction="sortDirection" sort-mode="manual" label="Registros financeiros" actions-label="Ação" @sort="updateSort">
           <template #cell-dueDate="{ row }">{{ date(asCharge(row).dueDate) }}</template>
           <template #cell-receivedAt="{ row }">{{ date(asPayment(row).receivedAt) }}</template>
           <template #cell-occurredAt="{ row }">{{ dateTime(asCredit(row).occurredAt) }}</template>
@@ -264,10 +271,15 @@ onBeforeUnmount(() => { if (loadingTimeout) clearTimeout(loadingTimeout) })
           <template #cell-financialCreditGenerated="{ row }"><span :class="asPayment(row).financialCreditGenerated > 0 ? 'text-emerald-700' : 'text-slate-400'">{{ currency(asPayment(row).financialCreditGenerated) }}</span></template>
           <template #cell-type="{ row }">{{ creditTypeLabel(asCredit(row).type) }}</template>
           <template v-if="activeView === 'cobrancas'" #actions="{ row }"><Button size="small" variant="secondary" @click="openCharge(asCharge(row).id)">Ver<template #trailingIcon><ArrowRightIcon /></template></Button></template>
+          <template #empty>
+            <EmptyState size="large" :title="hasError ? 'Não foi possível carregar o financeiro' : 'Nenhum registro encontrado'" :description="hasError ? 'Verifique a conexão e tente novamente.' : hasFilters ? 'Nenhum registro corresponde à busca atual.' : 'Os registros financeiros aparecerão aqui.'" :role="hasError ? 'alert' : 'status'">
+              <template #icon><TriangleAlertIcon v-if="hasError" /><SearchIcon v-else-if="hasFilters" /><CircleDollarSignIcon v-else /></template>
+              <template #action><Button v-if="hasError" size="small" @click="setLoading">Tentar novamente</Button><Button v-else-if="hasFilters" size="small" variant="secondary" @click="clearFilters">Limpar filtros</Button></template>
+            </EmptyState>
+          </template>
         </DataTable>
 
-        <div v-if="!isLoading && sortedItems.length" class="ts-responsive-row mt-4 gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500"><p>Exibindo {{ visibleStart }}–{{ visibleEnd }} de {{ sortedItems.length }}</p><Pagination v-model:page="currentPage" :total="sortedItems.length" :items-per-page="itemsPerPage" /></div>
-      </template>
+        <div v-if="!hasError" class="ts-responsive-row mt-4 shrink-0 gap-3 border-t border-slate-100 pt-4 text-sm text-slate-500"><p aria-live="polite">Exibindo {{ visibleStart }}–{{ visibleEnd }} de {{ sortedItems.length }}</p><Pagination v-model="currentPage" :total="sortedItems.length" :items-per-page="itemsPerPage" label="Paginação do financeiro" /></div>
     </Card>
     <div class="h-6 shrink-0" aria-hidden="true" />
   </section>
