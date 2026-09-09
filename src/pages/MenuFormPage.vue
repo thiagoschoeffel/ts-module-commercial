@@ -35,6 +35,7 @@ const allOffers = ref<MenuOffer[]>(catalogOffers.map((source, index) => {
   }
 }))
 const feedback = ref('')
+const feedbackVariant = ref<'success' | 'danger'>('success')
 const showValidation = ref(false)
 const saving = ref(false)
 const draggedOfferId = ref<string>()
@@ -144,12 +145,16 @@ async function persist(publish: boolean) {
       publishedAt: draft.value.publishedAt ?? (publish ? new Date().toISOString() : undefined)
     })
     draft.value = menu
+    feedbackVariant.value = 'success'
     feedback.value = publish && wasDraft
       ? 'Cardápio publicado e disponível para novos pedidos.'
       : 'Alterações do cardápio salvas.'
     if (props.mode === 'create') navigationTimer = setTimeout(() => navigate(`/cardapios/${menu.date}`, true), 800)
   }
-  catch (error) { feedback.value = error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.' }
+  catch (error) {
+    feedbackVariant.value = 'danger'
+    feedback.value = error instanceof Error ? error.message : 'Não foi possível salvar o cardápio.'
+  }
   finally { saving.value = false }
 }
 function availabilityLabel(value: MenuAvailability) {
@@ -162,7 +167,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="pb-20 lg:pb-0">
-    <Alert v-if="feedback" class="mb-4" variants="success" :description="feedback"><template #icon><CheckIcon /></template></Alert>
+    <Alert v-if="feedback" class="mb-4" :variants="feedbackVariant" :description="feedback">
+      <template #icon><CheckIcon v-if="feedbackVariant === 'success'" /><TriangleAlertIcon v-else /></template>
+    </Alert>
     <Alert v-if="showValidation && hasErrors" class="mb-4" variants="danger" title="Revise o cardápio" description="Informe as três opções do dia, selecione ao menos uma oferta e verifique os preços."><template #icon><TriangleAlertIcon /></template></Alert>
 
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
